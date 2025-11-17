@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control ADE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <i class="fas fa-chart-line"></i>
+            <h1>Control ADE</h1>
+        </div>
+        <div class="header-right">
+            <div class="upload-section">
+                <button class="btn-primary" id="btnCargarDatos">
+                    <i class="fas fa-upload"></i> Cargar Datos
+                </button>
+                <div class="file-info">
+                    <i class="fas fa-info-circle"></i>
+                    <span id="fileStatus">Ningún archivo</span>
+                </div>
+            </div>
+            <nav class="tabs">
+                <button class="tab active" data-tab="dashboard">
+                    <i class="fas fa-chart-pie"></i> Dashboard
+                </button>
+                <button class="tab" data-tab="listado">
+                    <i class="fas fa-table"></i> Listado
+                </button>
+                <button class="tab" data-tab="atrasos">
+                    <i class="fas fa-exclamation-triangle"></i> Atrasos
+                </button>
+                <button class="tab" data-tab="evolucion">
+                    <i class="fas fa-chart-line"></i> Evolución
+                </button>
+                <button class="tab" data-tab="subcontratos">
+                    <i class="fas fa-building"></i> Subcontratos
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <section class="filters-section">
+                <h2>FILTROS</h2>
+                <div class="filter-group">
+                    <label for="filterSemana">Semana</label>
+                    <select id="filterSemana" class="filter-select" aria-label="Filtrar por semana">
+                        <option value="">Todas las semanas</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filterFecha">Fecha de Reporte</label>
+                    <select id="filterFecha" class="filter-select" aria-label="Filtrar por fecha de reporte">
+                        <option value="">Todas las fechas</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filterTematica">Temática</label>
+                    <select id="filterTematica" class="filter-select" aria-label="Filtrar por temática">
+                        <option value="">Todas las temáticas</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filterItem">Ítem</label>
+                    <select id="filterItem" class="filter-select" aria-label="Filtrar por ítem">
+                        <option value="">Todos los ítems</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filterPersona">Persona</label>
+                    <select id="filterPersona" class="filter-select" aria-label="Filtrar por persona">
+                        <option value="">Todas las personas</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filterEstado">Estado</label>
+                    <select id="filterEstado" class="filter-select" aria-label="Filtrar por estado">
+                        <option value="">Todos los estados</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filterOrigen">Origen</label>
+                    <select id="filterOrigen" class="filter-select" aria-label="Filtrar por origen">
+                        <option value="">Subcontratos (todas)</option>
+                    </select>
+                </div>
+            </section>
+
+            <section class="actions-section">
+                <h2>ACCIONES</h2>
+                <button class="btn-secondary" id="btnLimpiarFiltros">
+                    <i class="fas fa-filter"></i> Limpiar Filtros
+                </button>
+                <button class="btn-secondary" id="btnExportarExcel">
+                    <i class="fas fa-file-excel"></i> Exportar a Excel
+                </button>
+                <button class="btn-danger" id="btnEliminarDatos">
+                    <i class="fas fa-trash"></i> Eliminar Datos
+                </button>
+            </section>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div id="dashboardView" class="tab-content active">
+                <!-- KPIs -->
+                <div id="kpiCards" class="kpi-cards">
+                    <!-- KPI cards will be generated dynamically -->
+                </div>
+                
+                <h2 class="section-title">Distribución por Estado</h2>
+                <div id="dashboardCards" class="dashboard-cards">
+                    <!-- Cards will be generated dynamically -->
+                </div>
+            </div>
+
+            <div id="listadoView" class="tab-content">
+                <h2 class="section-title">Listado de Preguntas</h2>
+                <div id="listadoContent" class="listado-content">
+                    <!-- Listado content will be here -->
+                </div>
+            </div>
+
+            <div id="atrasosView" class="tab-content">
+                <h2 class="section-title">Control de Atrasos</h2>
+                <div id="atrasosContent" class="atrasos-content">
+                    <!-- Atrasos content will be here -->
+                </div>
+            </div>
+
+            <div id="evolucionView" class="tab-content">
+                <h2 class="section-title">Evolución Temporal</h2>
+                <div id="evolucionContent" class="evolucion-content">
+                    <!-- Evolution charts will be here -->
+                </div>
+            </div>
+
+            <div id="subcontratosView" class="tab-content">
+                <h2 class="section-title">Subcontratos</h2>
+                <div id="subcontratosContent" class="subcontratos-content">
+                    <!-- Subcontracts data will be here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Hidden file inputs -->
+    <input type="file" id="inputADE" accept=".json" class="hidden-input" aria-label="Cargar archivo ADE">
+    <input type="file" id="inputReporte" accept=".json" class="hidden-input" aria-label="Cargar archivo de reporte">
+
+    <!-- Modal para detalles -->
+    <div id="modalDetalle" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Detalle de Pregunta</h2>
+                <button class="modal-close" id="btnCerrarModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Detalle será insertado aquí -->
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
