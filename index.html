@@ -19,34 +19,23 @@
             <i class="fas fa-chart-line"></i>
             <h1>Control ADE</h1>
         </div>
-        <div class="header-right">
-            <div class="upload-section">
-                <button class="btn-primary" id="btnCargarDatos">
-                    <i class="fas fa-upload"></i> Cargar Datos
-                </button>
-                <div class="file-info">
-                    <i class="fas fa-info-circle"></i>
-                    <span id="fileStatus">Ningún archivo</span>
-                </div>
-            </div>
-            <nav class="tabs">
-                <button class="tab active" data-tab="dashboard">
-                    <i class="fas fa-chart-pie"></i> Dashboard
-                </button>
-                <button class="tab" data-tab="listado">
-                    <i class="fas fa-table"></i> Listado
-                </button>
-                <button class="tab" data-tab="atrasos">
-                    <i class="fas fa-exclamation-triangle"></i> Atrasos
-                </button>
-                <button class="tab" data-tab="evolucion" disabled aria-disabled="true" title="Vista desactivada temporalmente">
-                    <i class="fas fa-chart-line"></i> Evolución
-                </button>
-                <button class="tab" data-tab="subcontratos" disabled aria-disabled="true" title="Vista desactivada temporalmente">
-                    <i class="fas fa-building"></i> Subcontratos
-                </button>
-            </nav>
-        </div>
+        <nav class="tabs">
+            <button class="tab active" data-tab="dashboard">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </button>
+            <button class="tab" data-tab="listado">
+                <i class="fas fa-table"></i> Listado
+            </button>
+            <button class="tab" data-tab="atrasos">
+                <i class="fas fa-exclamation-triangle"></i> Atrasos
+            </button>
+            <button class="tab" data-tab="evolucion" disabled aria-disabled="true" title="Vista desactivada temporalmente">
+                <i class="fas fa-chart-line"></i> Evolución
+            </button>
+            <button class="tab" data-tab="subcontratos" disabled aria-disabled="true" title="Vista desactivada temporalmente">
+                <i class="fas fa-building"></i> Subcontratos
+            </button>
+        </nav>
     </header>
 
     <!-- Main Container -->
@@ -173,7 +162,22 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-status">
+                <i class="fas fa-info-circle"></i>
+                <span id="fileStatus">Ningún archivo</span>
+            </div>
+            <div class="footer-actions">
+                <button class="btn-footer" id="btnCargarDatosFooter" title="Actualizar datos desde repositorio">
+                    <i class="fas fa-sync-alt"></i> Actualizar Datos
+                </button>
+            </div>
+        </div>
+    </footer>
+
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>
 
