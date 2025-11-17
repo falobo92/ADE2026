@@ -39,10 +39,10 @@
                 <button class="tab" data-tab="atrasos">
                     <i class="fas fa-exclamation-triangle"></i> Atrasos
                 </button>
-                <button class="tab" data-tab="evolucion">
+                <button class="tab" data-tab="evolucion" disabled aria-disabled="true" title="Vista desactivada temporalmente">
                     <i class="fas fa-chart-line"></i> Evolución
                 </button>
-                <button class="tab" data-tab="subcontratos">
+                <button class="tab" data-tab="subcontratos" disabled aria-disabled="true" title="Vista desactivada temporalmente">
                     <i class="fas fa-building"></i> Subcontratos
                 </button>
             </nav>
@@ -107,9 +107,6 @@
                 <button class="btn-secondary" id="btnExportarExcel">
                     <i class="fas fa-file-excel"></i> Exportar a Excel
                 </button>
-                <button class="btn-danger" id="btnEliminarDatos">
-                    <i class="fas fa-trash"></i> Eliminar Datos
-                </button>
             </section>
         </aside>
 
@@ -166,7 +163,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2>Detalle de Pregunta</h2>
-                <button class="modal-close" id="btnCerrarModal">
+                <button class="modal-close" id="btnCerrarModal" aria-label="Cerrar detalle" title="Cerrar detalle">
                     <i class="fas fa-times"></i>
                 </button>
             </div>

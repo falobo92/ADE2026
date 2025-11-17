@@ -103,6 +103,14 @@ body {
     border-bottom: 3px solid transparent;
 }
 
+.tab[disabled],
+.tab.disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    border-bottom-color: transparent;
+    color: rgba(255,255,255,0.4);
+}
+
 .tab.active {
     color: var(--white);
     border-bottom-color: var(--mainYellow);
@@ -475,19 +483,20 @@ body {
 /* KPI Cards */
 .kpi-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.9rem;
+    margin-bottom: 1.2rem;
 }
 
 .kpi-card {
     background: var(--white);
-    border-radius: 10px;
-    padding: 1.3rem;
+    border-radius: 7px;
+    padding: 0.85rem 0.95rem;
     border: 1px solid var(--borderGray);
-    border-left: 5px solid var(--mainBlue);
+    border-left: 3px solid var(--mainBlue);
     position: relative;
     overflow: hidden;
+    min-height: 120px;
 }
 
 .kpi-card.green {
@@ -507,7 +516,7 @@ body {
     color: var(--mediumGrayText);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.3rem;
     font-weight: 600;
 }
 
@@ -515,7 +524,8 @@ body {
     font-size: 2rem;
     font-weight: 700;
     color: var(--mainBlue);
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.15rem;
+    line-height: 1.1;
 }
 
 .kpi-card.green .kpi-value {
@@ -537,10 +547,10 @@ body {
 
 .kpi-icon {
     position: absolute;
-    top: 1rem;
-    right: 1rem;
-    font-size: 2.5rem;
-    opacity: 0.08;
+    top: 0.7rem;
+    right: 0.7rem;
+    font-size: 2.1rem;
+    opacity: 0.06;
     color: var(--mainBlue);
 }
 

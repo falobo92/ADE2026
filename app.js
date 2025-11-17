@@ -1,3 +1,7 @@
+const DATOS_ADE_URL = 'https://raw.githubusercontent.com/falobo92/ADE2026/main/Datos_fijos_ADE.json';
+const REPORTES_API_URL = 'https://api.github.com/repos/falobo92/ADE2026/contents/reportes';
+const REPORTES_RAW_BASE = 'https://raw.githubusercontent.com/falobo92/ADE2026/main/reportes/';
+
 // Estado global de la aplicación
 const AppState = {
     datosADE: null,
@@ -79,6 +83,8 @@ document.addEventListener('DOMContentLoaded', () => {
     inicializarFechasProgramacion();
     inicializarApp();
     cargarDatosAlmacenados();
+    cargarDatosFijosEnLinea({ mostrarNotificacion: true });
+    cargarReportesEnLinea({ mostrarNotificacion: true });
 });
 
 function inicializarApp() {
@@ -97,7 +103,6 @@ function inicializarApp() {
 
     document.getElementById('btnLimpiarFiltros').addEventListener('click', limpiarFiltros);
     document.getElementById('btnExportarExcel').addEventListener('click', exportarExcel);
-    document.getElementById('btnEliminarDatos').addEventListener('click', eliminarDatos);
 
     // Event listeners para filtros
     document.querySelectorAll('.filter-select').forEach(select => {
@@ -123,17 +128,24 @@ function inicializarApp() {
 }
 
 function cambiarTab(tabName) {
+    const tabButton = document.querySelector(`[data-tab="${tabName}"]`);
+    const tabContent = document.getElementById(`${tabName}View`);
+
+    if (!tabButton || !tabContent || tabButton.disabled || tabButton.classList.contains('disabled')) {
+        return;
+    }
+
     // Actualizar tabs
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
     });
-    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+    tabButton.classList.add('active');
 
     // Actualizar contenido
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.remove('active');
     });
-    document.getElementById(`${tabName}View`).classList.add('active');
+    tabContent.classList.add('active');
 
     // Actualizar vista según tab
     if (tabName === 'dashboard') {
@@ -163,17 +175,17 @@ function mostrarMenuCarga() {
             </div>
             <div class="modal-body">
                 <div style="display: flex; flex-direction: column; gap: 1rem;">
-                    <button class="btn-primary" style="width: 100%; justify-content: center;" onclick="document.getElementById('inputADE').click(); this.closest('.modal').remove();">
-                        <i class="fas fa-database"></i> Cargar Datos ADE (Una vez)
+                    <button class="btn-primary" style="width: 100%; justify-content: center;" onclick="cargarDatosFijosEnLinea({ mostrarNotificacion: true }); this.closest('.modal').remove();">
+                        <i class="fas fa-database"></i> Actualizar Datos ADE (en línea)
                     </button>
-                    <button class="btn-secondary" style="width: 100%; justify-content: center;" onclick="document.getElementById('inputReporte').click(); this.closest('.modal').remove();">
-                        <i class="fas fa-file-alt"></i> Cargar Reporte Diario
+                    <button class="btn-secondary" style="width: 100%; justify-content: center;" onclick="cargarReportesEnLinea({ mostrarNotificacion: true }); this.closest('.modal').remove();">
+                        <i class="fas fa-file-alt"></i> Actualizar Reportes (en línea)
                     </button>
                 </div>
                 <div style="margin-top: 1.5rem; padding: 1rem; background: #f5f5f5; border-radius: 6px;">
                     <p style="font-size: 0.9rem; color: #666; margin: 0;">
-                        <strong>Datos ADE:</strong> Archivo JSON con los datos fijos de la Adenda Excepcional (se carga una sola vez).<br><br>
-                        <strong>Reporte Diario:</strong> Archivo JSON con el reporte del día (se pueden cargar múltiples reportes).
+                        <strong>Datos ADE:</strong> Se descargan automáticamente desde el repositorio oficial para asegurar que siempre estén actualizados.<br><br>
+                        <strong>Reportes:</strong> Se extraen en línea desde el repositorio oficial y se sincronizan con la aplicación.
                     </p>
                 </div>
             </div>
@@ -187,6 +199,142 @@ function mostrarMenuCarga() {
             menu.remove();
         }
     });
+}
+
+async function cargarDatosFijosEnLinea(opciones = {}) {
+    const { mostrarNotificacion = false } = opciones;
+    const statusEl = document.getElementById('fileStatus');
+    
+    if (mostrarNotificacion) {
+        statusEl.innerHTML = '<span class="loading"></span> Descargando datos ADE en línea...';
+    }
+
+    try {
+        const respuesta = await fetch(`${DATOS_ADE_URL}?t=${Date.now()}`, { cache: 'no-store' });
+        
+        if (!respuesta.ok) {
+            throw new Error(`Respuesta ${respuesta.status} al obtener los datos ADE`);
+        }
+
+        const datos = await respuesta.json();
+
+        if (!Array.isArray(datos)) {
+            throw new Error('El archivo ADE debe ser un array de objetos');
+        }
+
+        if (datos.length === 0) {
+            throw new Error('El archivo ADE está vacío');
+        }
+
+        AppState.datosADE = datos;
+        guardarEnLocalStorage('datosADE', datos);
+        correlacionarDatos();
+        actualizarFiltros();
+        actualizarDashboard();
+
+        const mensaje = `Datos ADE en línea (${datos.length} registros)`;
+        actualizarEstadoArchivo(mensaje);
+        statusEl.style.color = 'var(--green)';
+        setTimeout(() => {
+            statusEl.style.color = '';
+        }, 3000);
+    } catch (error) {
+        console.error('Error al descargar datos ADE en línea:', error);
+        if (mostrarNotificacion) {
+            actualizarEstadoArchivo('Error al descargar datos ADE en línea');
+            statusEl.style.color = 'var(--red)';
+            setTimeout(() => {
+                statusEl.style.color = '';
+            }, 3000);
+            alert('No fue posible descargar los datos ADE en línea: ' + error.message);
+        }
+    }
+}
+
+async function cargarReportesEnLinea(opciones = {}) {
+    const { mostrarNotificacion = false } = opciones;
+    const statusEl = document.getElementById('fileStatus');
+
+    if (mostrarNotificacion) {
+        statusEl.innerHTML = '<span class="loading"></span> Descargando reportes en línea...';
+    }
+
+    try {
+        const respuesta = await fetch(`${REPORTES_API_URL}?t=${Date.now()}`, {
+            headers: {
+                'Accept': 'application/vnd.github+json'
+            },
+            cache: 'no-store'
+        });
+
+        if (!respuesta.ok) {
+            throw new Error(`Respuesta ${respuesta.status} al obtener el listado de reportes`);
+        }
+
+        const archivos = await respuesta.json();
+        const archivosJSON = Array.isArray(archivos)
+            ? archivos.filter(item => item.type === 'file' && item.name.toLowerCase().endsWith('.json'))
+            : [];
+
+        if (archivosJSON.length === 0) {
+            throw new Error('No se encontraron reportes en el repositorio');
+        }
+
+        const reportes = [];
+
+        for (const archivo of archivosJSON) {
+            const rutaRaw = `${REPORTES_RAW_BASE}${archivo.name}?t=${Date.now()}`;
+            const respReporte = await fetch(rutaRaw, { cache: 'no-store' });
+
+            if (!respReporte.ok) {
+                console.warn(`No fue posible descargar el reporte ${archivo.name}`);
+                continue;
+            }
+
+            const datos = await respReporte.json();
+
+            if (!datos.FechaReporte || !datos.SemanaReporte || !Array.isArray(datos.Registros)) {
+                console.warn(`Formato inválido en el reporte ${archivo.name}`);
+                continue;
+            }
+
+            reportes.push(datos);
+        }
+
+        if (reportes.length === 0) {
+            throw new Error('No se pudieron cargar reportes válidos');
+        }
+
+        reportes.sort((a, b) => {
+            const fechaA = new Date(a.FechaReporte);
+            const fechaB = new Date(b.FechaReporte);
+            return fechaA - fechaB;
+        });
+
+        AppState.reportes = reportes;
+        guardarEnLocalStorage('reportes', reportes);
+        correlacionarDatos();
+        actualizarFiltros();
+        actualizarDashboard();
+
+        const ultimoReporte = reportes[reportes.length - 1];
+        const mensaje = `Reportes en línea (${reportes.length}) - Último: ${ultimoReporte.FechaReporte}`;
+        actualizarEstadoArchivo(mensaje);
+        statusEl.style.color = 'var(--green)';
+        setTimeout(() => {
+            statusEl.style.color = '';
+        }, 3000);
+    } catch (error) {
+        console.error('Error al descargar reportes en línea:', error);
+        if (mostrarNotificacion) {
+            actualizarEstadoArchivo('Error al descargar reportes en línea');
+            statusEl.style.color = 'var(--red)';
+            setTimeout(() => {
+                statusEl.style.color = '';
+            }, 3000);
+            alert('No fue posible descargar los reportes en línea: ' + error.message);
+        }
+    }
 }
 
 async function cargarArchivoADE(archivo) {
@@ -1249,6 +1397,17 @@ function inicializarGraficos(resumenProgramacion) {
             return;
         }
 
+        const existingChart = (typeof Chart !== 'undefined' && typeof Chart.getChart === 'function')
+            ? Chart.getChart(canvas)
+            : null;
+        if (existingChart) {
+            try {
+                existingChart.destroy();
+            } catch (error) {
+                console.warn('No se pudo destruir el gráfico existente (Chart.getChart):', error);
+            }
+        }
+
         const ctx = canvas.getContext('2d');
         
         // Asegurar que el canvas tenga dimensiones
@@ -1422,6 +1581,17 @@ function inicializarGraficoProgramacion(resumenProgramacion) {
 
     const canvas = document.getElementById('chartProgramacion');
     if (!canvas) return;
+
+    const existingChart = (typeof Chart !== 'undefined' && typeof Chart.getChart === 'function')
+        ? Chart.getChart(canvas)
+        : null;
+    if (existingChart) {
+        try {
+            existingChart.destroy();
+        } catch (error) {
+            console.warn('No se pudo destruir el gráfico de programación existente (Chart.getChart):', error);
+        }
+    }
 
     const ctx = canvas.getContext('2d');
     const parent = canvas.parentElement;
@@ -1994,21 +2164,17 @@ function actualizarAtrasos() {
                     <th>Persona</th>
                     <th>Cantidad</th>
                     <th>Días Promedio</th>
-                    <th>Estado</th>
                 </tr>
             </thead>
             <tbody>
     `;
 
     personasOrdenadas.forEach(persona => {
-        const badgeClass = persona.promedioDias > 30 ? 'badge-danger' : 
-                          persona.promedioDias > 14 ? 'badge-warning' : 'badge-success';
         html += `
             <tr>
                 <td><strong>${persona.persona}</strong></td>
                 <td>${persona.cantidad}</td>
                 <td><span class="dias-atraso">${persona.promedioDias} días</span></td>
-                <td><span class="badge ${badgeClass}">${persona.promedioDias > 30 ? 'Crítico' : persona.promedioDias > 14 ? 'Alto' : 'Moderado'}</span></td>
             </tr>
         `;
     });
@@ -2033,7 +2199,6 @@ function actualizarAtrasos() {
                     <option value="Tematica">Temática</option>
                     <option value="Elaborador">Elaborador</option>
                     <option value="Revisor">Revisor</option>
-                    <option value="Estado">Estado</option>
                     <option value="Subcontrato">Subcontrato</option>
                     <option value="FechaEntrega">Fecha Entrega</option>
                     <option value="diasAtraso">Días Atraso</option>
@@ -2050,7 +2215,6 @@ function actualizarAtrasos() {
                         <th data-col="Tematica" class="sortable">Temática <i class="fas fa-sort"></i></th>
                         <th data-col="Elaborador" class="sortable">Elaborador <i class="fas fa-sort"></i></th>
                         <th data-col="Revisor" class="sortable">Revisor <i class="fas fa-sort"></i></th>
-                        <th data-col="Estado" class="sortable">Estado <i class="fas fa-sort"></i></th>
                         <th data-col="Subcontrato" class="sortable">Subcontrato <i class="fas fa-sort"></i></th>
                         <th data-col="FechaEntrega" class="sortable">Fecha Entrega <i class="fas fa-sort"></i></th>
                         <th data-col="diasAtraso" class="sortable">Días Atraso <i class="fas fa-sort"></i></th>
@@ -2061,8 +2225,6 @@ function actualizarAtrasos() {
     `;
 
     atrasos.forEach(item => {
-        const claseEstado = item.Estado ? item.Estado.toLowerCase().replace(/\s+/g, '-') : '';
-        const color = ESTADO_COLORS[item.Estado] || '#999';
         const badgeClass = item.diasAtraso > 30 ? 'badge-danger' : 
                           item.diasAtraso > 14 ? 'badge-warning' : 'badge-success';
         html += `
@@ -2073,10 +2235,6 @@ function actualizarAtrasos() {
                 <td>${item.Tematica || ''}</td>
                 <td>${item.Elaborador || 'Sin asignar'}</td>
                 <td>${item.Revisor || 'Sin asignar'}</td>
-                <td>
-                    <span class="status-indicator status-${claseEstado}" data-color="${color}"></span>
-                    ${item.Estado || ''}
-                </td>
                 <td>${item.Subcontrato || ''}</td>
                 <td>${item.FechaEntrega || ''}</td>
                 <td><span class="dias-atraso ${badgeClass}">${item.diasAtraso} días</span></td>
@@ -2102,11 +2260,6 @@ function actualizarAtrasos() {
 
     // Aplicar colores y agregar listeners para la tabla de atrasos
     setTimeout(() => {
-        document.querySelectorAll('#tablaAtrasos .status-indicator[data-color]').forEach(indicator => {
-            const color = indicator.getAttribute('data-color');
-            indicator.style.backgroundColor = color;
-        });
-
         // Event listeners para búsqueda
         const buscarAtrasos = document.getElementById('buscarAtrasos');
         if (buscarAtrasos) {
@@ -2241,8 +2394,6 @@ function ordenarPorColumnaAtrasos(columna, datosAtrasos) {
     tbody.innerHTML = '';
 
     datosOrdenados.forEach(item => {
-        const claseEstado = item.Estado ? item.Estado.toLowerCase().replace(/\s+/g, '-') : '';
-        const color = ESTADO_COLORS[item.Estado] || '#999';
         const badgeClass = item.diasAtraso > 30 ? 'badge-danger' : 
                           item.diasAtraso > 14 ? 'badge-warning' : 'badge-success';
         const row = document.createElement('tr');
@@ -2255,10 +2406,6 @@ function ordenarPorColumnaAtrasos(columna, datosAtrasos) {
             <td>${item.Tematica || ''}</td>
             <td>${item.Elaborador || 'Sin asignar'}</td>
             <td>${item.Revisor || 'Sin asignar'}</td>
-            <td>
-                <span class="status-indicator status-${claseEstado}" data-color="${color}"></span>
-                ${item.Estado || ''}
-            </td>
             <td>${item.Subcontrato || ''}</td>
             <td>${item.FechaEntrega || ''}</td>
             <td><span class="dias-atraso ${badgeClass}">${item.diasAtraso} días</span></td>
@@ -2283,13 +2430,8 @@ function ordenarPorColumnaAtrasos(columna, datosAtrasos) {
         }
     }
 
-    // Reaplicar colores y listeners
+    // Reaplicar listeners
     setTimeout(() => {
-        document.querySelectorAll('#tablaAtrasos .status-indicator[data-color]').forEach(indicator => {
-            const color = indicator.getAttribute('data-color');
-            indicator.style.backgroundColor = color;
-        });
-
         document.querySelectorAll('#tablaAtrasos .clickable-row-detalle').forEach(row => {
             row.addEventListener('click', (e) => {
                 if (!e.target.closest('.btn-icon')) {
