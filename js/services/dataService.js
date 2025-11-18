@@ -41,15 +41,10 @@ export function obtenerDatosFiltrados(opciones = {}) {
 
     if (AppState.filtros.semana) {
         const semanaSeleccionada = parseInt(AppState.filtros.semana, 10);
-        // Obtener todas las fechas de reporte que corresponden a esta semana
-        const fechasDeLaSemana = [...new Set(
-            datos
-                .filter(d => d.SemanaReporte === semanaSeleccionada)
-                .map(d => d.FechaReporte)
-                .filter(Boolean)
-        )];
-        // Filtrar por FechaReporte que corresponden a la semana seleccionada
-        datos = datos.filter(d => fechasDeLaSemana.includes(d.FechaReporte));
+        datos = datos.filter(d => {
+            const semanaDato = parseInt(d.SemanaReporte, 10);
+            return !Number.isNaN(semanaDato) && semanaDato === semanaSeleccionada;
+        });
     }
 
     if (AppState.filtros.fecha) {

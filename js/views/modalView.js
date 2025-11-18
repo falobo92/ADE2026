@@ -114,82 +114,137 @@ export function mostrarVistaItems(estado, items) {
 export function mostrarDetalle(item) {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-    let diasAtraso = '';
+    let alertaAtraso = '';
     const fechaEntregaUI = formatearFechaParaMostrar(item.FechaEntrega, 'N/A');
     const fechaReporteUI = formatearFechaParaMostrar(item.FechaReporte, 'N/A');
 
     if (item.FechaEntrega && item.Estado !== 'Incorporada') {
         const fechaEntrega = new Date(item.FechaEntrega);
-        fechaEntrega.setHours(0, 0, 0, 0);
+        fechaEntrega.setHours(0, 0, 0);
         if (fechaEntrega < hoy) {
             const diffTime = hoy - fechaEntrega;
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            diasAtraso = `<div class="dias-atraso" style="margin-top: 1rem;">⚠️ <strong>Atraso:</strong> ${diffDays} días</div>`;
+            alertaAtraso = `
+                <div class="detalle-alerta-atraso">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div class="detalle-alerta-contenido">
+                        <strong>Pregunta con Atraso</strong>
+                        <span>${diffDays} ${diffDays === 1 ? 'día' : 'días'} de atraso</span>
+                    </div>
+                </div>
+            `;
         }
     }
 
     const html = `
         <div class="detalle-item">
-            <div class="detalle-field">
-                <label>N° (Correlativo):</label>
-                <div>${item.Correlativo || 'N/A'}</div>
-            </div>
-            <div class="detalle-field">
-                <label>ID:</label>
-                <div>${item.ID || 'N/A'}</div>
-            </div>
-            <div class="detalle-field">
-                <label>Ítem:</label>
-                <div>${item.Item || 'N/A'}</div>
-            </div>
-            <div class="detalle-field">
-                <label>Pregunta:</label>
-                <div class="detalle-texto-largo">${item.Pregunta || 'N/A'}</div>
-            </div>
-            <div class="detalle-field">
-                <label>Temática General:</label>
-                <div>${item.TematicaGeneral || 'N/A'}</div>
-            </div>
-            <div class="detalle-field">
-                <label>Temática:</label>
-                <div>${item.Tematica || 'N/A'}</div>
-            </div>
-            <div class="detalle-field">
-                <label>Componente:</label>
-                <div>${item.Componente || 'N/A'}</div>
-            </div>
-            <div class="detalle-field">
-                <label>Subcontrato:</label>
-                <div>${item.Subcontrato || 'N/A'}</div>
-            </div>
-            <div class="detalle-field">
-                <label>Elaborador:</label>
-                <div>${item.Elaborador || 'Sin asignar'}</div>
-            </div>
-            <div class="detalle-field">
-                <label>Revisor:</label>
-                <div>${item.Revisor || 'Sin asignar'}</div>
-            </div>
-            <div class="detalle-field">
-                <label>Estado:</label>
-                <div>
-                    <span class="status-indicator" data-color="${ESTADO_COLORS[item.Estado] || '#999'}"></span>
-                    ${item.Estado || 'N/A'}
+            ${alertaAtraso}
+            
+            <!-- Identificación -->
+            <div class="detalle-seccion">
+                <div class="detalle-seccion-titulo">
+                    <i class="fas fa-hashtag"></i>
+                    <span>Identificación</span>
+                </div>
+                <div class="detalle-grid">
+                    <div class="detalle-field">
+                        <label><i class="fas fa-list-ol"></i> N° Correlativo:</label>
+                        <div class="detalle-value">${item.Correlativo || 'N/A'}</div>
+                    </div>
+                    <div class="detalle-field">
+                        <label><i class="fas fa-tag"></i> ID:</label>
+                        <div class="detalle-value">${item.ID || 'N/A'}</div>
+                    </div>
+                </div>
+                <div class="detalle-field detalle-field-full">
+                    <label><i class="fas fa-file-alt"></i> Ítem:</label>
+                    <div class="detalle-value">${item.Item || 'N/A'}</div>
                 </div>
             </div>
-            <div class="detalle-field">
-                <label>Fecha de Entrega:</label>
-                <div>${fechaEntregaUI}</div>
+
+            <!-- Pregunta -->
+            <div class="detalle-seccion">
+                <div class="detalle-seccion-titulo">
+                    <i class="fas fa-question-circle"></i>
+                    <span>Pregunta</span>
+                </div>
+                <div class="detalle-pregunta-contenido">
+                    ${item.Pregunta || 'N/A'}
+                </div>
             </div>
-            <div class="detalle-field">
-                <label>Fecha de Reporte:</label>
-                <div>${fechaReporteUI}</div>
+
+            <!-- Clasificación -->
+            <div class="detalle-seccion">
+                <div class="detalle-seccion-titulo">
+                    <i class="fas fa-folder-open"></i>
+                    <span>Clasificación</span>
+                </div>
+                <div class="detalle-grid">
+                    <div class="detalle-field">
+                        <label><i class="fas fa-layer-group"></i> Temática General:</label>
+                        <div class="detalle-value">${item.TematicaGeneral || 'N/A'}</div>
+                    </div>
+                    <div class="detalle-field">
+                        <label><i class="fas fa-bookmark"></i> Temática:</label>
+                        <div class="detalle-value">${item.Tematica || 'N/A'}</div>
+                    </div>
+                    <div class="detalle-field">
+                        <label><i class="fas fa-puzzle-piece"></i> Componente:</label>
+                        <div class="detalle-value">${item.Componente || 'N/A'}</div>
+                    </div>
+                    <div class="detalle-field">
+                        <label><i class="fas fa-briefcase"></i> Subcontrato:</label>
+                        <div class="detalle-value">${item.Subcontrato || 'N/A'}</div>
+                    </div>
+                </div>
             </div>
-            <div class="detalle-field">
-                <label>Semana de Reporte:</label>
-                <div>${item.SemanaReporte || 'N/A'}</div>
+
+            <!-- Responsables -->
+            <div class="detalle-seccion">
+                <div class="detalle-seccion-titulo">
+                    <i class="fas fa-users"></i>
+                    <span>Responsables</span>
+                </div>
+                <div class="detalle-grid">
+                    <div class="detalle-field">
+                        <label><i class="fas fa-user-edit"></i> Elaborador:</label>
+                        <div class="detalle-value">${item.Elaborador || '<span class="sin-asignar">Sin asignar</span>'}</div>
+                    </div>
+                    <div class="detalle-field">
+                        <label><i class="fas fa-user-check"></i> Revisor:</label>
+                        <div class="detalle-value">${item.Revisor || '<span class="sin-asignar">Sin asignar</span>'}</div>
+                    </div>
+                </div>
             </div>
-            ${diasAtraso}
+
+            <!-- Estado y Fechas -->
+            <div class="detalle-seccion">
+                <div class="detalle-seccion-titulo">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Estado y Fechas</span>
+                </div>
+                <div class="detalle-field detalle-field-estado">
+                    <label><i class="fas fa-circle"></i> Estado:</label>
+                    <div class="detalle-estado-badge">
+                        <span class="status-indicator" data-color="${ESTADO_COLORS[item.Estado] || '#999'}"></span>
+                        <span class="estado-texto">${item.Estado || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="detalle-grid">
+                    <div class="detalle-field">
+                        <label><i class="fas fa-calendar-check"></i> Fecha de Entrega:</label>
+                        <div class="detalle-value">${fechaEntregaUI}</div>
+                    </div>
+                    <div class="detalle-field">
+                        <label><i class="fas fa-calendar-alt"></i> Fecha de Reporte:</label>
+                        <div class="detalle-value">${fechaReporteUI}</div>
+                    </div>
+                    <div class="detalle-field">
+                        <label><i class="fas fa-calendar-week"></i> Semana de Reporte:</label>
+                        <div class="detalle-value">${item.SemanaReporte || 'N/A'}</div>
+                    </div>
+                </div>
+            </div>
         </div>
     `;
 

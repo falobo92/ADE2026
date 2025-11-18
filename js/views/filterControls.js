@@ -1,10 +1,6 @@
 import { AppState } from '../state.js';
-import { actualizarDashboard } from './dashboardView.js';
-import { actualizarListado } from './listadoView.js';
-import { actualizarAtrasos } from './atrasosView.js';
-import { actualizarEvolucion } from './evolucionView.js';
-import { actualizarSubcontratos } from './subcontratosView.js';
 import { formatearFechaParaMostrar } from '../utils/date.js';
+import { renderActiveTab } from '../controllers/viewController.js';
 
 export function conectarFiltros() {
     document.querySelectorAll('.filter-select').forEach(select => {
@@ -27,14 +23,21 @@ export function aplicarFiltros() {
         actualizarFechasPorSemana();
     }
 
-    refrescarVistaActiva();
+    renderActiveTab();
 }
 
 export function actualizarFiltros() {
     const datos = AppState.datosCorrelacionados;
-    if (!datos || datos.length === 0) return;
+    if (!datos || datos.length === 0) {
+        renderActiveTab();
+        return;
+    }
 
-    const semanas = [...new Set(datos.map(d => d.SemanaReporte))].sort((a, b) => b - a);
+    const semanas = [...new Set(
+        datos
+            .map(d => d.SemanaReporte)
+            .filter(valor => valor !== undefined && valor !== null)
+    )].sort((a, b) => b - a);
     
     // Calcular fechas: si hay semana seleccionada, solo mostrar fechas de esa semana
     let fechas;
@@ -69,11 +72,12 @@ export function actualizarFiltros() {
 
     const selectSemana = document.getElementById('filterSemana');
     if (selectSemana) {
-        const valorSemana = semanas.length > 0 && semanas[0] !== undefined && semanas[0] !== null
-            ? String(semanas[0])
-            : '';
-        selectSemana.value = valorSemana;
-        AppState.filtros.semana = valorSemana;
+        const valoresSemana = semanas.map(sem => String(sem ?? ''));
+        const valorPreferido = valoresSemana.includes(AppState.filtros.semana)
+            ? AppState.filtros.semana
+            : (valoresSemana[0] || '');
+        selectSemana.value = valorPreferido;
+        AppState.filtros.semana = valorPreferido;
     }
 
     const selectFecha = document.getElementById('filterFecha');
@@ -86,7 +90,7 @@ export function actualizarFiltros() {
         AppState.filtros.fecha = valorFecha;
     }
 
-    refrescarVistaActiva();
+    renderActiveTab();
 }
 
 function actualizarFechasPorSemana() {
@@ -138,7 +142,7 @@ export function limpiarFiltros() {
     };
     // Actualizar fechas para mostrar todas las disponibles
     actualizarFechasPorSemana();
-    refrescarVistaActiva();
+    renderActiveTab();
 }
 
 function actualizarSelect(id, valores, prefijo) {
@@ -167,29 +171,6 @@ function actualizarSelect(id, valores, prefijo) {
 
     if (valorActual && Array.from(select.options).some(opt => opt.value === valorActual)) {
         select.value = valorActual;
-    }
-}
-
-function refrescarVistaActiva() {
-    const activeTab = document.querySelector('.tab.active')?.dataset.tab || 'dashboard';
-
-    switch (activeTab) {
-        case 'listado':
-            actualizarListado();
-            break;
-        case 'atrasos':
-            actualizarAtrasos();
-            break;
-        case 'evolucion':
-            actualizarEvolucion();
-            break;
-        case 'subcontratos':
-            actualizarSubcontratos();
-            break;
-        case 'dashboard':
-        default:
-            actualizarDashboard();
-            break;
     }
 }
 

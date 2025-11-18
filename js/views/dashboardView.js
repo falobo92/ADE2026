@@ -9,6 +9,26 @@ import { mostrarVistaItems } from './modalView.js';
 let chartTotalGeneral = null;
 let chartProgramacion = null;
 
+const COLOR_ESTADO_POR_DEFECTO = '#999';
+const ESTADO_ORDEN_MAP = ESTADOS.reduce((acc, estado, index) => {
+    acc[estado] = index;
+    return acc;
+}, {});
+
+function compararEstadosPorOrden(estadoA, estadoB) {
+    const ordenA = ESTADO_ORDEN_MAP[estadoA];
+    const ordenB = ESTADO_ORDEN_MAP[estadoB];
+
+    if (ordenA !== undefined && ordenB !== undefined) {
+        return ordenA - ordenB;
+    }
+
+    if (ordenA !== undefined) return -1;
+    if (ordenB !== undefined) return 1;
+
+    return estadoA.localeCompare(estadoB);
+}
+
 export function actualizarDashboard() {
     const datos = obtenerDatosFiltrados();
     const container = document.getElementById('dashboardCards');
@@ -139,7 +159,18 @@ function calcularDistribucionPorEstado(datos) {
     const distribucion = {};
 
     ESTADOS.forEach(estado => {
-        distribucion[estado] = datos.filter(d => d.Estado === estado).length;
+        distribucion[estado] = 0;
+    });
+
+    datos.forEach(d => {
+        const estado = d.Estado;
+        if (!estado) return;
+
+        if (distribucion[estado] === undefined) {
+            distribucion[estado] = 0;
+        }
+
+        distribucion[estado] += 1;
     });
 
     return distribucion;
@@ -148,10 +179,10 @@ function calcularDistribucionPorEstado(datos) {
 function crearCardDistribucion(titulo, distribucion, total) {
     const items = Object.entries(distribucion)
         .filter(([, cantidad]) => cantidad > 0)
-        .sort(([estadoA], [estadoB]) => estadoA.localeCompare(estadoB))
+        .sort(([estadoA], [estadoB]) => compararEstadosPorOrden(estadoA, estadoB))
         .map(([estado, cantidad]) => {
             const porcentaje = total > 0 ? ((cantidad / total) * 100).toFixed(1) : 0;
-            const color = ESTADO_COLORS[estado] || '#999';
+            const color = ESTADO_COLORS[estado] || COLOR_ESTADO_POR_DEFECTO;
             const claseEstado = estado.toLowerCase().replace(/\s+/g, '-');
 
             return `
@@ -169,7 +200,7 @@ function crearCardDistribucion(titulo, distribucion, total) {
     return `
         <div class="dashboard-card">
             <div class="card-title">${titulo}</div>
-            <div class="card-chart-container-vertical">
+            <div class="card-chart-container legend-panel-right">
                 <div class="card-chart">
                     <canvas id="chartTotalGeneral"></canvas>
                 </div>
@@ -224,11 +255,11 @@ function inicializarGraficos(resumenProgramacion) {
 
         const datosGrafico = Object.entries(distribucion)
             .filter(([, cantidad]) => cantidad > 0)
-            .sort(([estadoA], [estadoB]) => estadoA.localeCompare(estadoB))
+            .sort(([estadoA], [estadoB]) => compararEstadosPorOrden(estadoA, estadoB))
             .map(([estado, cantidad]) => ({
                 label: estado,
                 value: cantidad,
-                color: ESTADO_COLORS[estado] || '#999'
+                color: ESTADO_COLORS[estado] || COLOR_ESTADO_POR_DEFECTO
             }));
 
         if (datosGrafico.length === 0) return;
@@ -280,7 +311,7 @@ function inicializarGraficos(resumenProgramacion) {
                     mode: 'index'
                 },
                 plugins: {
-                    legend: { display: false },
+                    legend: false,
                     tooltip: {
                         enabled: true,
                         backgroundColor: 'rgba(0, 0, 0, 0.85)',
@@ -302,7 +333,7 @@ function inicializarGraficos(resumenProgramacion) {
                                 return `${value} preguntas (${porcentaje}%)`;
                             },
                             labelColor: (context) => {
-                                const color = datosGrafico[context.dataIndex]?.color || '#999';
+                                const color = datosGrafico[context.dataIndex]?.color || COLOR_ESTADO_POR_DEFECTO;
                                 return { borderColor: color, backgroundColor: color };
                             }
                         }
@@ -431,6 +462,7 @@ function prepararDatosProgramacion(datos) {
     const estadosProgramacion = [
         'En elaboración',
         'En revisor técnico',
+        'Con observaciones',
         'En cartografía',
         'En editorial'
     ];

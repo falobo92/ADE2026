@@ -4,26 +4,28 @@ export const REPORTES_RAW_BASE = 'https://raw.githubusercontent.com/falobo92/ADE
 
 export const ESTADOS = [
     'En elaboración',
-    'En elaboración cartografía',
+    'Subcontrato',
+    'Con observaciones',
     'En cartografía',
     'En revisor técnico',
-    'En coordinador',
+    'Pendiente',
     'En editorial',
     'Incorporada',
-    'Subcontrato',
-    'Pendiente'
+    'En elaboración cartografía',
+    'En coordinador'
 ];
 
 export const ESTADO_COLORS = {
     'En elaboración': '#ff9800',
-    'En elaboración cartografía': '#ffc107',
+    'Subcontrato': '#9e9e9e',
+    'Con observaciones': '#ff5722',
     'En cartografía': '#2196f3',
     'En revisor técnico': '#17a2b8',
-    'En coordinador': '#0056b3',
+    'Pendiente': '#757575',
     'En editorial': '#9c27b0',
     'Incorporada': '#4caf50',
-    'Subcontrato': '#9e9e9e',
-    'Pendiente': '#757575'
+    'En elaboración cartografía': '#ffc107',
+    'En coordinador': '#0056b3'
 };
 
 export const PROGRAMACION_FECHAS_BASE = [

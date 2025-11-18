@@ -1,6 +1,6 @@
 import { ESTADO_COLORS } from '../constants.js';
 import { obtenerDatosFiltrados } from '../services/dataService.js';
-import { applyStatusIndicatorColors, attachTextoFilter } from '../utils/table.js';
+import { applyStatusIndicatorColors, attachTextoFilter, toggleSortState, actualizarIconosOrden } from '../utils/table.js';
 import { mostrarDetalleItem } from './modalView.js';
 import { formatearFechaParaMostrar } from '../utils/date.js';
 
@@ -152,12 +152,7 @@ function inicializarListadoEventos() {
 }
 
 function ordenarPorColumna(columna) {
-    if (ordenActual.columna === columna) {
-        ordenActual.direccion = ordenActual.direccion === 'asc' ? 'desc' : 'asc';
-    } else {
-        ordenActual.columna = columna;
-        ordenActual.direccion = 'asc';
-    }
+    ordenActual = toggleSortState(ordenActual, columna);
 
     const datos = obtenerDatosFiltrados();
     const datosOrdenados = [...datos].sort((a, b) => compararValoresListado(a, b, columna));
@@ -203,18 +198,5 @@ function compararValoresListado(a, b, columna) {
     if (valorA > valorB) comparacion = 1;
 
     return ordenActual.direccion === 'asc' ? comparacion : -comparacion;
-}
-
-function actualizarIconosOrden(tablaSelector, columna, direccion) {
-    document.querySelectorAll(`${tablaSelector} .sortable i`).forEach(icon => {
-        icon.className = 'fas fa-sort';
-    });
-    const headerActual = document.querySelector(`${tablaSelector} [data-col="${columna}"]`);
-    if (headerActual) {
-        const icon = headerActual.querySelector('i');
-        if (icon) {
-            icon.className = direccion === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
-        }
-    }
 }
 

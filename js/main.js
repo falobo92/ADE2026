@@ -1,11 +1,6 @@
 import { inicializarFechasProgramacion } from './services/programacionService.js';
 import { cargarDatosFijosEnLinea, cargarReportesEnLinea, cargarArchivoADE, cargarReporte } from './services/dataLoader.js';
 import { restaurarDatosAlmacenados } from './services/storageService.js';
-import { actualizarDashboard } from './views/dashboardView.js';
-import { actualizarListado } from './views/listadoView.js';
-import { actualizarAtrasos } from './views/atrasosView.js';
-import { actualizarEvolucion } from './views/evolucionView.js';
-import { actualizarSubcontratos } from './views/subcontratosView.js';
 import { conectarFiltros, actualizarFiltros, limpiarFiltros } from './views/filterControls.js';
 import { initModalListeners, cerrarModal } from './views/modalView.js';
 import { mostrarMenuCarga } from './views/menuCarga.js';
@@ -13,10 +8,12 @@ import { exportarExcel } from './export/excelExporter.js';
 import { setStatusMessage } from './ui/statusBar.js';
 import { AppState } from './state.js';
 import { formatearFechaParaMostrar } from './utils/date.js';
+import { initViewController, renderActiveTab } from './controllers/viewController.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     inicializarFechasProgramacion();
     inicializarUI();
+    renderActiveTab();
     restaurarEstadoInicial();
     cargarDatosFijosEnLinea({ mostrarNotificacion: true });
     cargarReportesEnLinea({ mostrarNotificacion: true });
@@ -26,18 +23,7 @@ function inicializarUI() {
     setStatusMessage('Ningún archivo');
     initModalListeners();
     conectarFiltros();
-
-    document.querySelectorAll('.tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            const tabName = tab.dataset.tab;
-            cambiarTab(tabName);
-        });
-    });
-
-    const btnCargarDatos = document.getElementById('btnCargarDatos');
-    if (btnCargarDatos) {
-        btnCargarDatos.addEventListener('click', mostrarMenuCarga);
-    }
+    initViewController();
 
     const btnCargarDatosFooter = document.getElementById('btnCargarDatosFooter');
     if (btnCargarDatosFooter) {
@@ -87,7 +73,6 @@ function restaurarEstadoInicial() {
 
     if (restauroADE || restauroReportes) {
         actualizarFiltros();
-        actualizarDashboard();
 
         if (restauroReportes && AppState.reportes.length > 0) {
             const ultimoReporte = AppState.reportes[AppState.reportes.length - 1];
@@ -98,31 +83,3 @@ function restaurarEstadoInicial() {
         }
     }
 }
-
-function cambiarTab(tabName) {
-    const tabButton = document.querySelector(`[data-tab="${tabName}"]`);
-    const tabContent = document.getElementById(`${tabName}View`);
-
-    if (!tabButton || !tabContent || tabButton.disabled || tabButton.classList.contains('disabled')) {
-        return;
-    }
-
-    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-    tabButton.classList.add('active');
-
-    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-    tabContent.classList.add('active');
-
-    if (tabName === 'dashboard') {
-        actualizarDashboard();
-    } else if (tabName === 'listado') {
-        actualizarListado();
-    } else if (tabName === 'atrasos') {
-        actualizarAtrasos();
-    } else if (tabName === 'evolucion') {
-        actualizarEvolucion();
-    } else if (tabName === 'subcontratos') {
-        actualizarSubcontratos();
-    }
-}
-

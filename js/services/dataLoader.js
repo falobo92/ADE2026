@@ -3,9 +3,11 @@ import { AppState } from '../state.js';
 import { correlacionarDatos } from './dataService.js';
 import { guardarEnLocalStorage } from './storageService.js';
 import { actualizarFiltros } from '../views/filterControls.js';
-import { actualizarDashboard } from '../views/dashboardView.js';
 import { setStatusMessage } from '../ui/statusBar.js';
 import { formatearFechaParaMostrar } from '../utils/date.js';
+import { getGitHubToken } from './githubService.js';
+
+const MAX_REPORTES_DESCARGA = 25;
 
 export async function cargarDatosFijosEnLinea(opciones = {}) {
     const { mostrarNotificacion = false } = opciones;
@@ -15,27 +17,14 @@ export async function cargarDatosFijosEnLinea(opciones = {}) {
     }
 
     try {
-        const respuesta = await fetch(`${DATOS_ADE_URL}?t=${Date.now()}`, { cache: 'no-store' });
-
-        if (!respuesta.ok) {
-            throw new Error(`Respuesta ${respuesta.status} al obtener los datos ADE`);
-        }
-
-        const datos = await respuesta.json();
-
-        if (!Array.isArray(datos)) {
-            throw new Error('El archivo ADE debe ser un array de objetos');
-        }
-
-        if (datos.length === 0) {
-            throw new Error('El archivo ADE está vacío');
-        }
+        const datos = validarDatosADE(await descargarJSON(`${DATOS_ADE_URL}?t=${Date.now()}`, {
+            descripcion: 'los datos ADE'
+        }));
 
         AppState.datosADE = datos;
         guardarEnLocalStorage('datosADE', datos);
         correlacionarDatos();
         actualizarFiltros();
-        actualizarDashboard();
 
         const mensaje = `Datos ADE en línea (${datos.length} registros)`;
         setStatusMessage(mensaje, { tipo: 'success' });
@@ -56,16 +45,10 @@ export async function cargarReportesEnLinea(opciones = {}) {
     }
 
     try {
-        const respuesta = await fetch(`${REPORTES_API_URL}?t=${Date.now()}`, {
-            headers: { 'Accept': 'application/vnd.github+json' },
-            cache: 'no-store'
+        const archivos = await descargarJSON(`${REPORTES_API_URL}?t=${Date.now()}`, {
+            descripcion: 'el listado de reportes',
+            requiereGitHubAuth: true
         });
-
-        if (!respuesta.ok) {
-            throw new Error(`Respuesta ${respuesta.status} al obtener el listado de reportes`);
-        }
-
-        const archivos = await respuesta.json();
         const archivosJSON = Array.isArray(archivos)
             ? archivos.filter(item => item.type === 'file' && item.name.toLowerCase().endsWith('.json'))
             : [];
@@ -74,46 +57,46 @@ export async function cargarReportesEnLinea(opciones = {}) {
             throw new Error('No se encontraron reportes en el repositorio');
         }
 
-        const reportes = [];
-        for (const archivo of archivosJSON) {
-            const rutaRaw = `${REPORTES_RAW_BASE}${archivo.name}?t=${Date.now()}`;
-            const respReporte = await fetch(rutaRaw, { cache: 'no-store' });
+        const archivosProcesar = limitarReportesRecientes(archivosJSON, MAX_REPORTES_DESCARGA);
 
-            if (!respReporte.ok) {
-                console.warn(`No fue posible descargar el reporte ${archivo.name}`);
-                continue;
+        const resultados = await Promise.allSettled(
+            archivosProcesar.map(archivo => obtenerReporteDesdeRepositorio(archivo))
+        );
+
+        const reportes = resultados
+            .filter(resultado => resultado.status === 'fulfilled')
+            .map(resultado => resultado.value);
+
+        resultados.forEach((resultado, index) => {
+            if (resultado.status === 'rejected') {
+                const nombre = archivosProcesar[index]?.name || 'desconocido';
+                console.warn(`No fue posible descargar o validar el reporte ${nombre}`, resultado.reason);
             }
-
-            const datos = await respReporte.json();
-            if (!datos.FechaReporte || !datos.SemanaReporte || !Array.isArray(datos.Registros)) {
-                console.warn(`Formato inválido en el reporte ${archivo.name}`);
-                continue;
-            }
-
-            reportes.push(datos);
-        }
+        });
 
         if (reportes.length === 0) {
             throw new Error('No se pudieron cargar reportes válidos');
         }
 
-        reportes.sort((a, b) => new Date(a.FechaReporte) - new Date(b.FechaReporte));
+        ordenarReportesPorFecha(reportes);
 
         AppState.reportes = reportes;
         guardarEnLocalStorage('reportes', reportes);
         correlacionarDatos();
         actualizarFiltros();
-        actualizarDashboard();
 
         const ultimoReporte = reportes[reportes.length - 1];
         const ultimoReporteFecha = formatearFechaParaMostrar(ultimoReporte.FechaReporte, ultimoReporte.FechaReporte || '');
-        const mensaje = `Reportes en línea (${reportes.length}) - Último: ${ultimoReporteFecha}`;
+        const resumenLimite = archivosProcesar.length < archivosJSON.length
+            ? ` (${reportes.length} de ${archivosJSON.length} totales)`
+            : ` (${reportes.length})`;
+        const mensaje = `Reportes en línea${resumenLimite} - Último: ${ultimoReporteFecha}${archivosProcesar.length < archivosJSON.length ? ' (últimos registros)' : ''}`;
         setStatusMessage(mensaje, { tipo: 'success' });
     } catch (error) {
         console.error('Error al descargar reportes en línea:', error);
         if (mostrarNotificacion) {
-            setStatusMessage('Error al descargar reportes en línea', { tipo: 'error' });
-            alert('No fue posible descargar los reportes en línea: ' + error.message);
+            setStatusMessage(obtenerMensajeErrorGitHub(error), { tipo: 'error' });
+            alert(obtenerMensajeErrorGitHub(error));
         }
     }
 }
@@ -125,22 +108,13 @@ export async function cargarArchivoADE(archivo) {
 
     try {
         const texto = await leerArchivo(archivo);
-        const datos = JSON.parse(texto);
-
-        if (!Array.isArray(datos)) {
-            throw new Error('El archivo ADE debe ser un array de objetos');
-        }
-
-        if (datos.length === 0) {
-            throw new Error('El archivo ADE está vacío');
-        }
+        const datos = validarDatosADE(JSON.parse(texto));
 
         AppState.datosADE = datos;
         guardarEnLocalStorage('datosADE', datos);
         setStatusMessage(`Datos ADE cargados (${datos.length} registros)`, { tipo: 'success' });
         correlacionarDatos();
         actualizarFiltros();
-        actualizarDashboard();
 
         document.getElementById('inputADE').value = '';
     } catch (error) {
@@ -157,15 +131,7 @@ export async function cargarReporte(archivo) {
 
     try {
         const texto = await leerArchivo(archivo);
-        const datos = JSON.parse(texto);
-
-        if (!datos.FechaReporte || !datos.SemanaReporte || !Array.isArray(datos.Registros)) {
-            throw new Error('Formato de reporte inválido. Debe contener FechaReporte, SemanaReporte y Registros');
-        }
-
-        if (datos.Registros.length === 0) {
-            throw new Error('El reporte no contiene registros');
-        }
+        const datos = validarReporte(JSON.parse(texto));
 
         const existeReporte = AppState.reportes.find(r =>
             r.FechaReporte === datos.FechaReporte && r.SemanaReporte === datos.SemanaReporte
@@ -185,12 +151,12 @@ export async function cargarReporte(archivo) {
         }
 
         AppState.reportes.push(datos);
+        ordenarReportesPorFecha(AppState.reportes);
         guardarEnLocalStorage('reportes', AppState.reportes);
         const fechaReporteUI = formatearFechaParaMostrar(datos.FechaReporte, datos.FechaReporte || '');
         setStatusMessage(`Reporte: ${fechaReporteUI} - Semana ${datos.SemanaReporte} (${datos.Registros.length} registros)`, { tipo: 'success' });
         correlacionarDatos();
         actualizarFiltros();
-        actualizarDashboard();
 
         document.getElementById('inputReporte').value = '';
     } catch (error) {
@@ -199,6 +165,163 @@ export async function cargarReporte(archivo) {
         console.error(error);
         document.getElementById('inputReporte').value = '';
     }
+}
+
+async function descargarJSON(url, opciones = {}) {
+    const {
+        descripcion = 'el recurso',
+        requiereGitHubAuth = false,
+        headers = {},
+        ...fetchOptions
+    } = opciones;
+
+    const finalHeaders = { ...headers };
+
+    if (requiereGitHubAuth) {
+        finalHeaders['Accept'] ??= 'application/vnd.github+json';
+        const token = getGitHubToken();
+        if (token) {
+            finalHeaders.Authorization = `Bearer ${token}`;
+        }
+    }
+
+    const respuesta = await fetch(url, {
+        cache: 'no-store',
+        ...fetchOptions,
+        headers: finalHeaders
+    });
+
+    if (!respuesta.ok) {
+        throw new Error(`Respuesta ${respuesta.status} al obtener ${descripcion}`);
+    }
+
+    return respuesta.json();
+}
+
+function validarDatosADE(datos) {
+    if (!Array.isArray(datos)) {
+        throw new Error('El archivo ADE debe ser un array de objetos');
+    }
+
+    if (datos.length === 0) {
+        throw new Error('El archivo ADE está vacío');
+    }
+
+    return datos;
+}
+
+function validarReporte(datos, origen = 'reporte') {
+    if (!datos || typeof datos !== 'object') {
+        throw new Error(`Formato de reporte inválido (${origen})`);
+    }
+
+    const faltantes = [];
+    if (!datos.FechaReporte) faltantes.push('FechaReporte');
+    if (datos.SemanaReporte === undefined || datos.SemanaReporte === null) faltantes.push('SemanaReporte');
+    if (!Array.isArray(datos.Registros)) faltantes.push('Registros');
+
+    if (faltantes.length > 0) {
+        throw new Error(`Formato de reporte inválido (${origen}). Falta: ${faltantes.join(', ')}`);
+    }
+
+    if (datos.Registros.length === 0) {
+        throw new Error(`El reporte ${origen} no contiene registros`);
+    }
+
+    return datos;
+}
+
+function ordenarReportesPorFecha(reportes = []) {
+    reportes.sort((a, b) => {
+        const fechaA = Date.parse(a?.FechaReporte ?? '');
+        const fechaB = Date.parse(b?.FechaReporte ?? '');
+
+        if (!Number.isNaN(fechaA) && !Number.isNaN(fechaB)) {
+            return fechaA - fechaB;
+        }
+
+        const semanaA = parseInt(a?.SemanaReporte ?? 0, 10) || 0;
+        const semanaB = parseInt(b?.SemanaReporte ?? 0, 10) || 0;
+        return semanaA - semanaB;
+    });
+}
+
+async function obtenerReporteDesdeRepositorio(archivo) {
+    const token = getGitHubToken();
+    let datos;
+
+    if (token) {
+        const urlAPI = `${REPORTES_API_URL}/${archivo.name}?t=${Date.now()}`;
+        const respuesta = await fetch(urlAPI, {
+            headers: {
+                Accept: 'application/vnd.github.raw+json',
+                Authorization: `Bearer ${token}`
+            },
+            cache: 'no-store'
+        });
+
+        if (!respuesta.ok) {
+            throw new Error(`Respuesta ${respuesta.status} al obtener el reporte ${archivo.name}`);
+        }
+
+        const texto = await respuesta.text();
+        datos = JSON.parse(texto);
+    } else {
+        const rutaRaw = `${REPORTES_RAW_BASE}${archivo.name}?t=${Date.now()}`;
+        datos = await descargarJSON(rutaRaw, {
+            descripcion: `el reporte ${archivo.name}`
+        });
+    }
+
+    return validarReporte(datos, archivo.name);
+}
+
+function limitarReportesRecientes(listado = [], limite = MAX_REPORTES_DESCARGA) {
+    if (!Array.isArray(listado) || listado.length <= limite) {
+        return listado;
+    }
+
+    const ordenados = [...listado].sort((a, b) => {
+        const fechaA = extraerTimestampDesdeNombre(a?.name);
+        const fechaB = extraerTimestampDesdeNombre(b?.name);
+
+        if (fechaA && fechaB) return fechaB - fechaA;
+        if (fechaA && !fechaB) return -1;
+        if (!fechaA && fechaB) return 1;
+        return (b?.name || '').localeCompare(a?.name || '');
+    });
+
+    return ordenados.slice(0, limite);
+}
+
+function extraerTimestampDesdeNombre(nombre) {
+    if (!nombre) return null;
+
+    const matchFecha = nombre.match(/\d{4}-\d{2}-\d{2}/);
+    if (matchFecha) {
+        const timestamp = Date.parse(matchFecha[0]);
+        if (!Number.isNaN(timestamp)) {
+            return timestamp;
+        }
+    }
+
+    const matchSemana = nombre.match(/semana(\d+)/i);
+    if (matchSemana) {
+        const semana = parseInt(matchSemana[1], 10);
+        if (!Number.isNaN(semana)) {
+            return semana;
+        }
+    }
+
+    return null;
+}
+
+function obtenerMensajeErrorGitHub(error) {
+    const mensajeBase = 'No fue posible descargar los reportes en línea';
+    if (error?.message?.includes('Respuesta 403')) {
+        return `${mensajeBase}: acceso restringido (403). Configura un token personal en el menú "Cargar Datos" para autenticarte con GitHub.`;
+    }
+    return `${mensajeBase}: ${error?.message || 'error desconocido'}`;
 }
 
 async function leerArchivo(archivo) {

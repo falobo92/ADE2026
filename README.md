@@ -28,10 +28,26 @@ Aplicación web moderna y funcional para la gestión y visualización de datos d
 
 ```
 APP ADE/
-├── index.html          # Estructura HTML principal
-├── styles.css          # Estilos CSS
-├── app.js             # Lógica de la aplicación
-└── README.md          # Este archivo
+├── index.html               # Estructura HTML principal
+├── styles.css               # Estilos globales
+├── js/
+│   ├── main.js              # Punto de entrada
+│   ├── state.js             # Estado global
+│   ├── constants.js         # Constantes compartidas
+│   ├── controllers/
+│   │   └── viewController.js  # Gestión centralizada de pestañas/vistas
+│   ├── services/
+│   │   ├── dataLoader.js       # Carga y validación de archivos
+│   │   ├── dataService.js      # Correlación y filtros de datos
+│   │   ├── programacionService.js
+│   │   └── storageService.js
+│   ├── views/                # Render de cada vista (dashboard, listado, etc.)
+│   ├── utils/                # Utilidades (fechas, tablas, etc.)
+│   └── export/
+│       └── excelExporter.js
+├── Datos_fijos_ADE.json
+├── Reporte_Semana46_2025-11-13.json
+└── README.md
 ```
 
 ## Uso
@@ -90,7 +106,19 @@ Los filtros se actualizan automáticamente con los valores disponibles en los da
 - **Estado**: Estado actual del registro
 - **Origen**: Subcontrato responsable
 
-### 4. Visualizar Dashboard
+### 4. Configurar un token personal de GitHub (opcional pero recomendado)
+
+Debido a los límites públicos de la API de GitHub, es posible que obtenga un error **403** al intentar sincronizar los reportes en línea. Para evitarlo:
+
+1. Abra **"Cargar Datos"** en la aplicación y vaya al bloque **"Token personal de GitHub"**.
+2. Cree un token clásico desde [GitHub → Settings → Developer settings → Personal access tokens](https://github.com/settings/tokens).
+   - Basta con otorgar permisos de solo lectura para repos públicos (`repo:public_repo`).
+3. Copie el token (formato `ghp_xxxxx`) y péguelo en el campo correspondiente; pulse **"Guardar token"**.
+4. El token se almacena únicamente en su navegador (localStorage) y se usa para firmar las peticiones a la API.
+5. Puede eliminarlo en cualquier momento con el botón **"Eliminar token"** si desea volver al modo público.
+6. Si prefiere no usar token, la aplicación limitará la descarga a los **últimos 25 reportes** para mantenerse por debajo del límite anónimo de GitHub.
+
+### 5. Visualizar Dashboard
 
 El dashboard muestra:
 - **KPIs en tiempo real**: Tarjetas con métricas clave (Incorporadas, En Proceso, Atrasos, Por Vencer, Total)
@@ -98,7 +126,7 @@ El dashboard muestra:
 - **Tabla detallada**: Cantidad y porcentaje por estado
 - **Total de preguntas**: Resumen general
 
-### 5. Control de Atrasos
+### 6. Control de Atrasos
 
 La pestaña "Atrasos" proporciona:
 - **Resumen de atrasos**: Total de atrasos, personas afectadas y días promedio
@@ -106,31 +134,25 @@ La pestaña "Atrasos" proporciona:
 - **Clasificación de criticidad**: Niveles Crítico (>30 días), Alto (14-30 días), Moderado (<14 días)
 - **Detalle completo**: Lista de todas las preguntas con atraso, incluyendo N°, Ítem, Elaborador, Subcontrato, Estado, Fecha de Entrega y Días de Atraso
 
-### 6. Evolución Temporal
+### 7. Evolución Temporal
 
 La pestaña "Evolución" muestra:
 - **Gráfico de línea**: Evolución de estados a lo largo del tiempo
 - **Múltiples series**: Total, Incorporadas y En Proceso
 - **Análisis temporal**: Visualización de tendencias y progreso
 
-### 7. Vista de Subcontratos
+### 8. Vista de Subcontratos
 
 La pestaña "Subcontratos" incluye:
 - **Análisis por subcontrato**: Cantidad total, incorporadas, en proceso y atrasos
 - **Distribución de estados**: Desglose por estado para cada subcontrato
 - **Ordenamiento**: Subcontratos ordenados por cantidad de preguntas
 
-### 8. Exportar a Excel
+### 9. Exportar a Excel
 
 1. Aplicar los filtros deseados (opcional)
 2. Hacer clic en **"Exportar a Excel"**
 3. El archivo se descargará automáticamente con los datos filtrados
-
-### 9. Eliminar Datos
-
-1. Hacer clic en **"Eliminar Datos"**
-2. Confirmar la eliminación
-3. Todos los datos se eliminarán del almacenamiento local
 
 ## Estados Disponibles
 
@@ -166,6 +188,7 @@ Los siguientes subcontratos están configurados en el sistema:
 - La exportación a Excel utiliza la librería SheetJS (xlsx)
 - La codificación de archivos debe ser UTF-8
 - Los datos se correlacionan automáticamente por el campo "Correlativo"
+- La navegación entre pestañas se gestiona desde `js/controllers/viewController.js`, lo que centraliza la renderización de vistas y evita duplicidad de lógica
 
 ## Requisitos
 
