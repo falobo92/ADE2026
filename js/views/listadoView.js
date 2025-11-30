@@ -4,10 +4,12 @@ import { applyStatusIndicatorColors, attachTextoFilter, toggleSortState, actuali
 import { mostrarDetalleItem } from './modalView.js';
 import { formatearFechaParaMostrar } from '../utils/date.js';
 
-let ordenActual = {
-    columna: null,
-    direccion: 'asc'
-};
+// Usar colores centralizados desde constants.js
+function getColor(estado) {
+    return ESTADO_COLORS[estado] || '#94a3b8';
+}
+
+let ordenActual = { columna: null, direccion: 'asc' };
 
 export function actualizarListado() {
     const datos = obtenerDatosFiltrados();
@@ -19,27 +21,27 @@ export function actualizarListado() {
         container.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-table"></i>
-                <p>No hay datos para mostrar</p>
+                <p>No hay datos disponibles</p>
             </div>
         `;
         return;
     }
 
-    container.innerHTML = crearTablaListado(datos);
-    inicializarListadoEventos();
+    container.innerHTML = renderTabla(datos);
+    inicializarEventos();
 }
 
-function crearTablaListado(datos) {
-    let html = `
+function renderTabla(datos) {
+    return `
         <div class="listado-controls">
             <div class="search-box">
-                <input type="text" id="buscarListado" placeholder="Buscar..." class="search-input">
                 <i class="fas fa-search"></i>
+                <input type="text" id="buscarListado" placeholder="Buscar..." class="search-input">
             </div>
             <div class="orden-controls">
-                <label>Ordenar por:</label>
+                <label>Ordenar:</label>
                 <select id="ordenarListado" class="filter-select">
-                    <option value="">Sin orden</option>
+                    <option value="">—</option>
                     <option value="Correlativo">N°</option>
                     <option value="ID">ID</option>
                     <option value="Item">Consulta</option>
@@ -64,42 +66,39 @@ function crearTablaListado(datos) {
                         <th data-col="Revisor" class="sortable">Revisor <i class="fas fa-sort"></i></th>
                         <th data-col="Estado" class="sortable">Estado <i class="fas fa-sort"></i></th>
                         <th data-col="Subcontrato" class="sortable">Subcontrato <i class="fas fa-sort"></i></th>
-                        <th data-col="FechaEntrega" class="sortable">Fecha Entrega <i class="fas fa-sort"></i></th>
-                        <th>Acciones</th>
+                        <th data-col="FechaEntrega" class="sortable">Fecha <i class="fas fa-sort"></i></th>
+                        <th style="width: 60px;"></th>
                     </tr>
                 </thead>
-                <tbody>
-                    ${renderListadoRows(datos)}
-                </tbody>
+                <tbody>${renderFilas(datos)}</tbody>
             </table>
         </div>
         <div class="listado-footer">
-            <span>Mostrando ${datos.length} registro(s)</span>
+            <span>${datos.length} registro${datos.length !== 1 ? 's' : ''}</span>
         </div>
     `;
-
-    return html;
 }
 
-function renderListadoRows(datos) {
+function renderFilas(datos) {
     return datos.map(item => {
-        const claseEstado = item.Estado ? item.Estado.toLowerCase().replace(/\s+/g, '-') : '';
-        const color = ESTADO_COLORS[item.Estado] || '#999';
-        const fechaEntrega = formatearFechaParaMostrar(item.FechaEntrega, item.FechaEntrega || '');
+        const color = getColor(item.Estado);
+        const fecha = formatearFechaParaMostrar(item.FechaEntrega, '');
+        const consulta = truncar(item.Pregunta || item.Item || '', 45);
+
         return `
             <tr class="clickable-row-detalle" data-id="${item.Correlativo}">
-                <td>${item.Correlativo || ''}</td>
-                <td>${item.ID || ''}</td>
-                <td>${(item.Pregunta || item.Item || '').substring(0, 50)}${(item.Pregunta || item.Item || '').length > 50 ? '...' : ''}</td>
+                <td style="font-weight: 500;">${item.Correlativo || ''}</td>
+                <td style="font-family: var(--font-mono, monospace); font-size: 0.75rem;">${item.ID || ''}</td>
+                <td title="${escapeHtml(item.Pregunta || item.Item || '')}">${consulta}</td>
                 <td>${item.Tematica || ''}</td>
-                <td>${item.Elaborador || 'Sin asignar'}</td>
-                <td>${item.Revisor || 'Sin asignar'}</td>
+                <td>${item.Elaborador || '<span style="color: var(--text-muted);">—</span>'}</td>
+                <td>${item.Revisor || '<span style="color: var(--text-muted);">—</span>'}</td>
                 <td>
-                    <span class="status-indicator status-${claseEstado}" data-color="${color}"></span>
+                    <span class="status-indicator" data-color="${color}" style="background-color: ${color}"></span>
                     ${item.Estado || ''}
                 </td>
                 <td>${item.Subcontrato || ''}</td>
-                <td>${fechaEntrega}</td>
+                <td>${fecha}</td>
                 <td>
                     <button class="btn-icon btn-ver-detalle" data-id="${item.Correlativo}" title="Ver detalle">
                         <i class="fas fa-eye"></i>
@@ -110,43 +109,34 @@ function renderListadoRows(datos) {
     }).join('');
 }
 
-function inicializarListadoEventos() {
+function inicializarEventos() {
     applyStatusIndicatorColors();
     attachTextoFilter('#buscarListado', '#tablaListado tbody tr');
 
-    const ordenarListado = document.getElementById('ordenarListado');
-    if (ordenarListado) {
-        ordenarListado.addEventListener('change', () => {
-            if (ordenarListado.value) {
-                ordenarPorColumna(ordenarListado.value);
-            }
+    const selectOrden = document.getElementById('ordenarListado');
+    if (selectOrden) {
+        selectOrden.addEventListener('change', () => {
+            if (selectOrden.value) ordenarPorColumna(selectOrden.value);
         });
     }
 
-    document.querySelectorAll('#tablaListado .sortable').forEach(header => {
-        header.addEventListener('click', () => {
-            const columna = header.dataset.col;
-            ordenarPorColumna(columna);
-        });
+    document.querySelectorAll('#tablaListado .sortable').forEach(th => {
+        th.addEventListener('click', () => ordenarPorColumna(th.dataset.col));
     });
 
     document.querySelectorAll('.btn-ver-detalle').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', e => {
             e.stopPropagation();
-            const correlativo = parseInt(btn.dataset.id, 10);
-            if (!Number.isNaN(correlativo)) {
-                mostrarDetalleItem(correlativo);
-            }
+            const id = parseInt(btn.dataset.id, 10);
+            if (!Number.isNaN(id)) mostrarDetalleItem(id);
         });
     });
 
     document.querySelectorAll('.clickable-row-detalle').forEach(row => {
-        row.addEventListener('click', (e) => {
+        row.addEventListener('click', e => {
             if (e.target.closest('.btn-icon')) return;
-            const correlativo = parseInt(row.dataset.id, 10);
-            if (!Number.isNaN(correlativo)) {
-                mostrarDetalleItem(correlativo);
-            }
+            const id = parseInt(row.dataset.id, 10);
+            if (!Number.isNaN(id)) mostrarDetalleItem(id);
         });
     });
 }
@@ -155,48 +145,56 @@ function ordenarPorColumna(columna) {
     ordenActual = toggleSortState(ordenActual, columna);
 
     const datos = obtenerDatosFiltrados();
-    const datosOrdenados = [...datos].sort((a, b) => compararValoresListado(a, b, columna));
+    const ordenados = [...datos].sort((a, b) => comparar(a, b, columna));
+
     const tbody = document.querySelector('#tablaListado tbody');
-    if (!tbody) return;
-
-    tbody.innerHTML = renderListadoRows(datosOrdenados);
-    inicializarListadoEventos();
-    actualizarIconosOrden('#tablaListado', columna, ordenActual.direccion);
+    if (tbody) {
+        tbody.innerHTML = renderFilas(ordenados);
+        inicializarEventos();
+        actualizarIconosOrden('#tablaListado', columna, ordenActual.direccion);
+    }
 }
 
-function compararValoresListado(a, b, columna) {
-    let valorA;
-    let valorB;
+function comparar(a, b, col) {
+    let vA, vB;
 
-    if (columna === 'Item') {
-        valorA = a.Pregunta || a.Item || '';
-        valorB = b.Pregunta || b.Item || '';
+    if (col === 'Item') {
+        vA = a.Pregunta || a.Item || '';
+        vB = b.Pregunta || b.Item || '';
     } else {
-        valorA = a[columna] || '';
-        valorB = b[columna] || '';
+        vA = a[col] || '';
+        vB = b[col] || '';
     }
 
-    if (columna === 'Correlativo' && !isNaN(valorA) && !isNaN(valorB)) {
-        valorA = parseInt(valorA, 10) || 0;
-        valorB = parseInt(valorB, 10) || 0;
-        const comparacion = valorA - valorB;
-        return ordenActual.direccion === 'asc' ? comparacion : -comparacion;
+    // Numérico
+    if (col === 'Correlativo' && !isNaN(vA) && !isNaN(vB)) {
+        const cmp = (parseInt(vA, 10) || 0) - (parseInt(vB, 10) || 0);
+        return ordenActual.direccion === 'asc' ? cmp : -cmp;
     }
 
-    if (columna === 'FechaEntrega' && valorA && valorB) {
-        const fechaA = new Date(valorA);
-        const fechaB = new Date(valorB);
-        const comparacion = fechaA - fechaB;
-        return ordenActual.direccion === 'asc' ? comparacion : -comparacion;
+    // Fecha
+    if (col === 'FechaEntrega' && vA && vB) {
+        const cmp = new Date(vA) - new Date(vB);
+        return ordenActual.direccion === 'asc' ? cmp : -cmp;
     }
 
-    valorA = String(valorA).toLowerCase();
-    valorB = String(valorB).toLowerCase();
-
-    let comparacion = 0;
-    if (valorA < valorB) comparacion = -1;
-    if (valorA > valorB) comparacion = 1;
-
-    return ordenActual.direccion === 'asc' ? comparacion : -comparacion;
+    // Texto
+    vA = String(vA).toLowerCase();
+    vB = String(vB).toLowerCase();
+    let cmp = 0;
+    if (vA < vB) cmp = -1;
+    if (vA > vB) cmp = 1;
+    return ordenActual.direccion === 'asc' ? cmp : -cmp;
 }
 
+function truncar(texto, max) {
+    if (!texto) return '';
+    return texto.length > max ? texto.substring(0, max) + '...' : texto;
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}

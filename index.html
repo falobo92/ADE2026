@@ -4,11 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Control ADE</title>
+    
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=3">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles.css?v=15">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -19,146 +25,232 @@
             <i class="fas fa-chart-line"></i>
             <h1>Control ADE</h1>
         </div>
-        <nav class="tabs">
-            <button class="tab active" data-tab="dashboard">
-                <i class="fas fa-chart-pie"></i> Dashboard
+        <nav class="tabs" role="tablist">
+            <button class="tab active" data-tab="dashboard" role="tab" aria-selected="true">
+                <i class="fas fa-chart-pie"></i>
+                <span>Dashboard</span>
             </button>
-            <button class="tab" data-tab="listado">
-                <i class="fas fa-table"></i> Listado
+            <button class="tab" data-tab="listado" role="tab" aria-selected="false">
+                <i class="fas fa-table"></i>
+                <span>Listado</span>
             </button>
-            <button class="tab" data-tab="atrasos">
-                <i class="fas fa-exclamation-triangle"></i> Atrasos
+            <button class="tab" data-tab="atrasos" role="tab" aria-selected="false">
+                <i class="fas fa-clock"></i>
+                <span>Atrasos</span>
             </button>
-            <button class="tab" data-tab="evolucion" disabled aria-disabled="true" title="Vista desactivada temporalmente">
-                <i class="fas fa-chart-line"></i> Evolución
+            <button class="tab" data-tab="evolucion" role="tab" aria-selected="false">
+                <i class="fas fa-chart-area"></i>
+                <span>Evolución</span>
             </button>
-            <button class="tab" data-tab="subcontratos" disabled aria-disabled="true" title="Vista desactivada temporalmente">
-                <i class="fas fa-building"></i> Subcontratos
+            <button class="tab" data-tab="subcontratos" role="tab" aria-selected="false">
+                <i class="fas fa-building"></i>
+                <span>Subcontratos</span>
             </button>
         </nav>
     </header>
 
     <!-- Main Container -->
     <div class="container">
+        <!-- Sidebar Overlay for mobile -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+        
+        <!-- Sidebar Toggle Button for mobile -->
+        <button class="sidebar-toggle" id="sidebarToggle" aria-label="Abrir filtros">
+            <i class="fas fa-filter"></i>
+        </button>
+        
         <!-- Sidebar -->
-        <aside class="sidebar">
-            <section class="filters-section">
-                <h2>FILTROS</h2>
-                <div class="filter-group">
-                    <label for="filterSemana">Semana</label>
-                    <select id="filterSemana" class="filter-select" aria-label="Filtrar por semana">
-                        <option value="">Todas las semanas</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="filterFecha">Fecha de Reporte</label>
-                    <select id="filterFecha" class="filter-select" aria-label="Filtrar por fecha de reporte">
-                        <option value="">Todas las fechas</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="filterTematica">Temática</label>
-                    <select id="filterTematica" class="filter-select" aria-label="Filtrar por temática">
-                        <option value="">Todas las temáticas</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="filterItem">Ítem</label>
-                    <select id="filterItem" class="filter-select" aria-label="Filtrar por ítem">
-                        <option value="">Todos los ítems</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="filterPersona">Persona</label>
-                    <select id="filterPersona" class="filter-select" aria-label="Filtrar por persona">
-                        <option value="">Todas las personas</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="filterEstado">Estado</label>
-                    <select id="filterEstado" class="filter-select" aria-label="Filtrar por estado">
-                        <option value="">Todos los estados</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="filterOrigen">Origen</label>
-                    <select id="filterOrigen" class="filter-select" aria-label="Filtrar por origen">
-                        <option value="">Subcontratos (todas)</option>
-                    </select>
-                </div>
-            </section>
-
-            <section class="actions-section">
-                <h2>ACCIONES</h2>
-                <button class="btn-secondary" id="btnLimpiarFiltros">
-                    <i class="fas fa-filter"></i> Limpiar Filtros
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-filters">
+                <select id="filterSemana" class="filter-select" title="Semana">
+                    <option value="">Semana</option>
+                </select>
+                <select id="filterFecha" class="filter-select" title="Fecha">
+                    <option value="">Fecha</option>
+                </select>
+                <select id="filterTematica" class="filter-select" title="Temática">
+                    <option value="">Temática</option>
+                </select>
+                <select id="filterItem" class="filter-select" title="Ítem">
+                    <option value="">Ítem</option>
+                </select>
+                <select id="filterPersona" class="filter-select" title="Persona">
+                    <option value="">Persona</option>
+                </select>
+                <select id="filterOrigen" class="filter-select" title="Subcontrato">
+                    <option value="">Subcontrato</option>
+                </select>
+                <select id="filterEstado" class="filter-select" title="Estado">
+                    <option value="">Estado</option>
+                </select>
+            </div>
+            
+            <div class="sidebar-actions">
+                <button class="btn-reset" id="btnLimpiarFiltros" title="Limpiar filtros">
+                    <i class="fas fa-rotate-left"></i>
                 </button>
-                <button class="btn-secondary" id="btnExportarExcel">
-                    <i class="fas fa-file-excel"></i> Exportar a Excel
+                <button class="btn-export" id="btnExportarExcel" title="Exportar Excel">
+                    <i class="fas fa-download"></i>
                 </button>
-            </section>
+            </div>
         </aside>
 
         <!-- Main Content -->
         <main class="main-content">
-            <div id="dashboardView" class="tab-content active">
-                <!-- KPIs -->
-                <div id="kpiCards" class="kpi-cards">
-                    <!-- KPI cards will be generated dynamically -->
-                </div>
-                
-                <h2 class="section-title">Distribución por Estado</h2>
-                <div id="dashboardCards" class="dashboard-cards">
-                    <!-- Cards will be generated dynamically -->
-                </div>
+            <!-- Dashboard View -->
+            <div id="dashboardView" class="tab-content active" role="tabpanel">
+                <!-- Resumen Ejecutivo -->
+                <section class="dashboard-summary" id="dashboardSummary">
+                    <div class="summary-header">
+                        <div class="summary-title">
+                            <h2><i class="fas fa-tachometer-alt"></i> Resumen Ejecutivo</h2>
+                            <span class="summary-date" id="summaryDate">--</span>
+                        </div>
+                        <div class="summary-actions">
+                            <button class="btn-icon-action" id="btnCopiarResumen" title="Copiar resumen al portapapeles">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <button class="btn-icon-action" id="btnImprimirDashboard" title="Imprimir Reporte">
+                                <i class="fas fa-print"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="summary-content" id="summaryContent">
+                        <!-- Se genera dinámicamente -->
+                    </div>
+                </section>
+
+                <!-- KPIs Principales -->
+                <section class="dashboard-kpis">
+                    <div id="kpiCards" class="kpi-grid"></div>
+                </section>
+
+                <!-- Gráficos en Grid -->
+                <section class="dashboard-charts">
+                    <div class="charts-grid">
+                        <!-- Gráfico de Distribución -->
+                        <div class="chart-card chart-distribution">
+                            <div class="chart-card-header">
+                                <h3><i class="fas fa-chart-pie"></i> Distribución por Estado</h3>
+                            </div>
+                            <div class="chart-card-body">
+                                <div class="chart-wrapper-donut">
+                                    <canvas id="chartTotalGeneral"></canvas>
+                                </div>
+                                <div class="chart-legend-table" id="legendTable">
+                                    <!-- Se genera dinámicamente -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Gráfico de Avance -->
+                        <div class="chart-card chart-progress">
+                            <div class="chart-card-header">
+                                <h3><i class="fas fa-tasks"></i> Avance General</h3>
+                            </div>
+                            <div class="chart-card-body">
+                                <div class="progress-overview" id="progressOverview">
+                                    <!-- Se genera dinámicamente -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Top Responsables -->
+                        <div class="chart-card chart-responsables">
+                            <div class="chart-card-header">
+                                <h3><i class="fas fa-users"></i> Carga por Responsable</h3>
+                            </div>
+                            <div class="chart-card-body">
+                                <div class="responsables-list" id="responsablesList">
+                                    <!-- Se genera dinámicamente -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Avance por Temática -->
+                        <div class="chart-card chart-tematicas">
+                            <div class="chart-card-header">
+                                <h3><i class="fas fa-layer-group"></i> Avance por Temática</h3>
+                            </div>
+                            <div class="chart-card-body">
+                                <div class="tematicas-grid" id="tematicasGrid">
+                                    <!-- Se genera dinámicamente -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Alertas Críticas -->
+                        <div class="chart-card chart-alerts">
+                            <div class="chart-card-header">
+                                <h3><i class="fas fa-exclamation-triangle"></i> Alertas Críticas</h3>
+                            </div>
+                            <div class="chart-card-body">
+                                <div class="alerts-container" id="alertsContainer">
+                                    <!-- Se genera dinámicamente -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Gráfico de Programación (Full Width) -->
+                <section class="dashboard-programacion">
+                    <div class="chart-card chart-full">
+                        <div class="chart-card-header">
+                            <h3><i class="fas fa-calendar-alt"></i> Programación vs Cumplimiento</h3>
+                        </div>
+                        <div class="chart-card-body">
+                            <div class="programacion-chart-area">
+                                <canvas id="chartProgramacion"></canvas>
+                            </div>
+                            <div class="programacion-table-area" id="programacionTable">
+                                <!-- Se genera dinámicamente -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
 
-            <div id="listadoView" class="tab-content">
+            <!-- Listado View -->
+            <div id="listadoView" class="tab-content" role="tabpanel">
                 <h2 class="section-title">Listado de Preguntas</h2>
-                <div id="listadoContent" class="listado-content">
-                    <!-- Listado content will be here -->
-                </div>
+                <div id="listadoContent" class="listado-content"></div>
             </div>
 
-            <div id="atrasosView" class="tab-content">
+            <!-- Atrasos View -->
+            <div id="atrasosView" class="tab-content" role="tabpanel">
                 <h2 class="section-title">Control de Atrasos</h2>
-                <div id="atrasosContent" class="atrasos-content">
-                    <!-- Atrasos content will be here -->
-                </div>
+                <div id="atrasosContent" class="atrasos-content"></div>
             </div>
 
-            <div id="evolucionView" class="tab-content">
+            <!-- Evolución View -->
+            <div id="evolucionView" class="tab-content" role="tabpanel">
                 <h2 class="section-title">Evolución Temporal</h2>
-                <div id="evolucionContent" class="evolucion-content">
-                    <!-- Evolution charts will be here -->
-                </div>
+                <div id="evolucionContent" class="evolucion-content"></div>
             </div>
 
-            <div id="subcontratosView" class="tab-content">
+            <!-- Subcontratos View -->
+            <div id="subcontratosView" class="tab-content" role="tabpanel">
                 <h2 class="section-title">Subcontratos</h2>
-                <div id="subcontratosContent" class="subcontratos-content">
-                    <!-- Subcontracts data will be here -->
-                </div>
+                <div id="subcontratosContent" class="subcontratos-content"></div>
             </div>
         </main>
     </div>
 
     <!-- Hidden file inputs -->
-    <input type="file" id="inputADE" accept=".json" class="hidden-input" aria-label="Cargar archivo ADE">
-    <input type="file" id="inputReporte" accept=".json" class="hidden-input" aria-label="Cargar archivo de reporte">
+    <input type="file" id="inputADE" accept=".json" class="hidden-input" aria-hidden="true">
+    <input type="file" id="inputReporte" accept=".json" class="hidden-input" aria-hidden="true">
 
-    <!-- Modal para detalles -->
-    <div id="modalDetalle" class="modal">
+    <!-- Modal -->
+    <div id="modalDetalle" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Detalle de Pregunta</h2>
-                <button class="modal-close" id="btnCerrarModal" aria-label="Cerrar detalle" title="Cerrar detalle">
+                <h2 id="modalTitle">Detalle</h2>
+                <button class="modal-close" id="btnCerrarModal" aria-label="Cerrar">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div class="modal-body" id="modalBody">
-                <!-- Detalle será insertado aquí -->
-            </div>
+            <div class="modal-body" id="modalBody"></div>
         </div>
     </div>
 
@@ -166,12 +258,13 @@
     <footer class="footer">
         <div class="footer-content">
             <div class="footer-status">
-                <i class="fas fa-info-circle"></i>
-                <span id="fileStatus">Ningún archivo</span>
+                <i class="fas fa-database"></i>
+                <span id="fileStatus">Sin datos cargados</span>
             </div>
             <div class="footer-actions">
-                <button class="btn-footer" id="btnCargarDatosFooter" title="Actualizar datos desde repositorio">
-                    <i class="fas fa-sync-alt"></i> Actualizar Datos
+                <button class="btn-footer" id="btnCargarDatosFooter" title="Sincronizar datos">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>Sincronizar</span>
                 </button>
             </div>
         </div>
@@ -180,4 +273,3 @@
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
-

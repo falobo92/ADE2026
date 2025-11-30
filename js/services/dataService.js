@@ -113,3 +113,11 @@ export function obtenerPrioridadTemporal(item) {
     return 0;
 }
 
+/**
+ * Obtiene todos los registros de reportes sin deduplicar
+ * Útil para análisis de evolución temporal
+ */
+export function obtenerTodosLosReportes() {
+    return [...AppState.datosCorrelacionados];
+}
+

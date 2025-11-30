@@ -45,13 +45,50 @@ export async function cargarReportesEnLinea(opciones = {}) {
     }
 
     try {
-        const archivos = await descargarJSON(`${REPORTES_API_URL}?t=${Date.now()}`, {
-            descripcion: 'el listado de reportes',
-            requiereGitHubAuth: true
-        });
-        const archivosJSON = Array.isArray(archivos)
-            ? archivos.filter(item => item.type === 'file' && item.name.toLowerCase().endsWith('.json'))
-            : [];
+        const token = getGitHubToken();
+        let archivosJSON = [];
+
+        // Intentar obtener lista de archivos
+        if (token) {
+            // Con token: usar API de GitHub
+            const archivos = await descargarJSON(`${REPORTES_API_URL}?t=${Date.now()}`, {
+                descripcion: 'el listado de reportes',
+                requiereGitHubAuth: true
+            });
+            archivosJSON = Array.isArray(archivos)
+                ? archivos.filter(item => item.type === 'file' && item.name.toLowerCase().endsWith('.json'))
+                : [];
+        } else {
+            // Sin token: intentar obtener índice de reportes o usar lista conocida
+            try {
+                const indice = await descargarJSON(`${REPORTES_RAW_BASE}index.json?t=${Date.now()}`, {
+                    descripcion: 'el índice de reportes'
+                });
+                archivosJSON = Array.isArray(indice) ? indice.map(name => ({ name, type: 'file' })) : [];
+            } catch {
+                // Si no hay índice, intentar con la API (puede fallar por rate limit)
+                try {
+                    const archivos = await descargarJSON(`${REPORTES_API_URL}?t=${Date.now()}`, {
+                        descripcion: 'el listado de reportes',
+                        requiereGitHubAuth: false
+                    });
+                    archivosJSON = Array.isArray(archivos)
+                        ? archivos.filter(item => item.type === 'file' && item.name.toLowerCase().endsWith('.json'))
+                        : [];
+                } catch (apiError) {
+                    // Si falla la API, usar los datos almacenados localmente
+                    if (apiError?.message?.includes('403')) {
+                        console.warn('Rate limit de GitHub alcanzado. Usando datos locales si existen.');
+                        if (AppState.reportes.length > 0) {
+                            setStatusMessage('Usando reportes almacenados localmente (límite de GitHub alcanzado)', { tipo: 'warning' });
+                            return;
+                        }
+                        throw new Error('Límite de solicitudes de GitHub alcanzado. Configura un token en "Sincronizar" o espera unos minutos.');
+                    }
+                    throw apiError;
+                }
+            }
+        }
 
         if (archivosJSON.length === 0) {
             throw new Error('No se encontraron reportes en el repositorio');
@@ -96,7 +133,6 @@ export async function cargarReportesEnLinea(opciones = {}) {
         console.error('Error al descargar reportes en línea:', error);
         if (mostrarNotificacion) {
             setStatusMessage(obtenerMensajeErrorGitHub(error), { tipo: 'error' });
-            alert(obtenerMensajeErrorGitHub(error));
         }
     }
 }
@@ -318,10 +354,18 @@ function extraerTimestampDesdeNombre(nombre) {
 
 function obtenerMensajeErrorGitHub(error) {
     const mensajeBase = 'No fue posible descargar los reportes en línea';
-    if (error?.message?.includes('Respuesta 403')) {
-        return `${mensajeBase}: acceso restringido (403). Configura un token personal en el menú "Cargar Datos" para autenticarte con GitHub.`;
+    const mensaje = error?.message || 'error desconocido';
+    
+    if (mensaje.includes('403') || mensaje.includes('Límite')) {
+        return `${mensajeBase}: límite de GitHub alcanzado. Usa el botón "Sincronizar" y configura un token, o espera unos minutos.`;
     }
-    return `${mensajeBase}: ${error?.message || 'error desconocido'}`;
+    if (mensaje.includes('404')) {
+        return `${mensajeBase}: repositorio no encontrado.`;
+    }
+    if (mensaje.includes('Failed to fetch') || mensaje.includes('NetworkError')) {
+        return `${mensajeBase}: sin conexión a internet.`;
+    }
+    return `${mensajeBase}: ${mensaje}`;
 }
 
 async function leerArchivo(archivo) {

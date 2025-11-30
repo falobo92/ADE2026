@@ -18,12 +18,37 @@ export function aplicarFiltros() {
     AppState.filtros.estado = document.getElementById('filterEstado').value;
     AppState.filtros.origen = document.getElementById('filterOrigen').value;
 
-    // Si cambió la semana, actualizar el dropdown de fechas
     if (semanaAnterior !== AppState.filtros.semana) {
         actualizarFechasPorSemana();
     }
 
+    actualizarEstilosFiltros();
     renderActiveTab();
+    cerrarSidebarMobile();
+}
+
+function actualizarEstilosFiltros() {
+    document.querySelectorAll('.filter-select').forEach(select => {
+        select.classList.toggle('has-value', select.value !== '');
+    });
+}
+
+/**
+ * Cierra el sidebar en dispositivos móviles
+ */
+function cerrarSidebarMobile() {
+    if (window.innerWidth <= 1024) {
+        const sidebar = document.getElementById('sidebar');
+        const toggle = document.getElementById('sidebarToggle');
+        const overlay = document.getElementById('sidebarOverlay');
+        
+        if (sidebar) sidebar.classList.remove('open');
+        if (overlay) overlay.classList.remove('active');
+        if (toggle) {
+            toggle.innerHTML = '<i class="fas fa-filter"></i>';
+            toggle.setAttribute('aria-label', 'Abrir filtros');
+        }
+    }
 }
 
 export function actualizarFiltros() {
@@ -90,6 +115,7 @@ export function actualizarFiltros() {
         AppState.filtros.fecha = valorFecha;
     }
 
+    actualizarEstilosFiltros();
     renderActiveTab();
 }
 
@@ -130,6 +156,7 @@ function actualizarFechasPorSemana() {
 export function limpiarFiltros() {
     document.querySelectorAll('.filter-select').forEach(select => {
         select.value = '';
+        select.classList.remove('has-value');
     });
     AppState.filtros = {
         semana: '',
@@ -140,7 +167,6 @@ export function limpiarFiltros() {
         estado: '',
         origen: ''
     };
-    // Actualizar fechas para mostrar todas las disponibles
     actualizarFechasPorSemana();
     renderActiveTab();
 }

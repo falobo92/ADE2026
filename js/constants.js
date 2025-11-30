@@ -15,17 +15,19 @@ export const ESTADOS = [
     'En coordinador'
 ];
 
+// Colores consistentes con las variables CSS del sistema
+// Basados en la paleta definida en styles.css
 export const ESTADO_COLORS = {
-    'En elaboración': '#ff9800',
-    'Subcontrato': '#9e9e9e',
-    'Con observaciones': '#ff5722',
-    'En cartografía': '#2196f3',
-    'En revisor técnico': '#17a2b8',
-    'Pendiente': '#757575',
-    'En editorial': '#9c27b0',
-    'Incorporada': '#4caf50',
-    'En elaboración cartografía': '#ffc107',
-    'En coordinador': '#0056b3'
+    'En elaboración': '#f59e0b',      // warning - amarillo/naranja
+    'Subcontrato': '#6b7280',         // gray-500
+    'Con observaciones': '#ef4444',   // danger/red
+    'En cartografía': '#3b82f6',      // blue-500
+    'En revisor técnico': '#06b6d4',  // cyan-500
+    'Pendiente': '#9ca3af',           // gray-400
+    'En editorial': '#8b5cf6',        // purple-500
+    'Incorporada': '#10b981',         // success/green
+    'En elaboración cartografía': '#fbbf24', // yellow-400
+    'En coordinador': '#1d4ed8'       // blue-700
 };
 
 export const PROGRAMACION_FECHAS_BASE = [

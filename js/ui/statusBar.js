@@ -1,3 +1,7 @@
+/**
+ * Barra de estado del footer
+ */
+
 const statusElement = () => document.getElementById('fileStatus');
 
 export function setStatusMessage(mensaje, opciones = {}) {
@@ -15,9 +19,9 @@ export function setStatusMessage(mensaje, opciones = {}) {
     el.textContent = mensaje;
 
     if (tipo === 'success') {
-        resaltarColor(el, 'var(--green)');
+        resaltarColor(el, 'var(--success)');
     } else if (tipo === 'error') {
-        resaltarColor(el, 'var(--red)');
+        resaltarColor(el, 'var(--danger)');
     } else {
         el.style.color = '';
     }
@@ -29,4 +33,3 @@ function resaltarColor(elemento, color) {
         elemento.style.color = '';
     }, 3000);
 }
-
