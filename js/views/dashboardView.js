@@ -169,9 +169,11 @@ function calcularResponsables(datos) {
             mapa[elaborador].enProceso++;
         }
         
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0);
-        if (d.FechaEntrega && d.Estado !== 'Incorporada' && d.Estado !== 'En editorial') {
+        // Atrasos: solo "En elaboración" con fecha vencida
+        // (consistente con calcularKPIs y atrasosView)
+        if (d.FechaEntrega && d.Estado === 'En elaboración') {
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
             const fecha = parseFechaFlexible(d.FechaEntrega);
             if (fecha) {
                 fecha.setHours(0, 0, 0, 0);
@@ -764,7 +766,7 @@ function inicializarGraficoProgramacion(data) {
 }
 
 function prepararProgramacion(datos) {
-    const estadosProg = ['En elaboración', 'En revisor técnico', 'Con observaciones', 'En cartografía', 'En editorial'];
+    const estadosProg = ['En elaboración', 'En revisor técnico', 'Con observaciones', 'En cartografía', 'En editorial', 'Incorporada'];
     const { claves, fechas, etiquetas } = getProgramacionConfig();
     const agrupado = {};
 
@@ -776,8 +778,14 @@ function prepararProgramacion(datos) {
     const fechasControl = claves.map(c => ({ clave: c, fecha: parseFechaFlexible(c) })).filter(x => x.fecha);
 
     datos.forEach(item => {
-        if (!estadosProg.includes(item.Estado) || !item.FechaEntrega) return;
-        const fechaEntrega = parseFechaFlexible(item.FechaEntrega);
+        if (!estadosProg.includes(item.Estado)) return;
+        // Para incorporadas, usar FechaReporte si no hay FechaEntrega
+        let fechaReferencia = item.FechaEntrega;
+        if (!fechaReferencia && item.Estado === 'Incorporada' && item.FechaReporte) {
+            fechaReferencia = item.FechaReporte;
+        }
+        if (!fechaReferencia) return;
+        const fechaEntrega = parseFechaFlexible(fechaReferencia);
         if (!fechaEntrega) return;
 
         let semana = null;
@@ -2135,12 +2143,15 @@ function prepararDatosSubcontratos(datos) {
             porSubcontrato[sub].conObservaciones++;
         }
 
-        // Atrasos
+        // Atrasos: solo "En elaboración" con fecha vencida
+        // (consistente con calcularKPIs y atrasosView)
         if (d.FechaEntrega && d.Estado === 'En elaboración') {
-            const fechaEntrega = new Date(d.FechaEntrega);
-            fechaEntrega.setHours(0, 0, 0, 0);
-            if (fechaEntrega < hoy) {
-                porSubcontrato[sub].atrasos++;
+            const fechaEntrega = parseFechaFlexible(d.FechaEntrega);
+            if (fechaEntrega) {
+                fechaEntrega.setHours(0, 0, 0, 0);
+                if (fechaEntrega < hoy) {
+                    porSubcontrato[sub].atrasos++;
+                }
             }
         }
     });

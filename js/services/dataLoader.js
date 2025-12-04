@@ -47,47 +47,78 @@ export async function cargarReportesEnLinea(opciones = {}) {
     try {
         const token = getGitHubToken();
         let archivosJSON = [];
+        let necesitaToken = false;
 
-        // Intentar obtener lista de archivos
-        if (token) {
-            // Con token: usar API de GitHub
-            const archivos = await descargarJSON(`${REPORTES_API_URL}?t=${Date.now()}`, {
-                descripcion: 'el listado de reportes',
-                requiereGitHubAuth: true
-            });
-            archivosJSON = Array.isArray(archivos)
-                ? archivos.filter(item => item.type === 'file' && item.name.toLowerCase().endsWith('.json'))
-                : [];
-        } else {
-            // Sin token: intentar obtener índice de reportes o usar lista conocida
-            try {
-                const indice = await descargarJSON(`${REPORTES_RAW_BASE}index.json?t=${Date.now()}`, {
-                    descripcion: 'el índice de reportes'
+        // Siempre intentar cargar, primero sin token si no hay uno guardado
+        try {
+            if (token) {
+                // Con token: usar API de GitHub
+                const archivos = await descargarJSON(`${REPORTES_API_URL}?t=${Date.now()}`, {
+                    descripcion: 'el listado de reportes',
+                    requiereGitHubAuth: true
                 });
-                archivosJSON = Array.isArray(indice) ? indice.map(name => ({ name, type: 'file' })) : [];
-            } catch {
-                // Si no hay índice, intentar con la API (puede fallar por rate limit)
+                archivosJSON = Array.isArray(archivos)
+                    ? archivos.filter(item => item.type === 'file' && item.name.toLowerCase().endsWith('.json'))
+                    : [];
+            } else {
+                // Sin token: intentar obtener índice de reportes o usar lista conocida
                 try {
-                    const archivos = await descargarJSON(`${REPORTES_API_URL}?t=${Date.now()}`, {
-                        descripcion: 'el listado de reportes',
-                        requiereGitHubAuth: false
+                    const indice = await descargarJSON(`${REPORTES_RAW_BASE}index.json?t=${Date.now()}`, {
+                        descripcion: 'el índice de reportes'
                     });
-                    archivosJSON = Array.isArray(archivos)
-                        ? archivos.filter(item => item.type === 'file' && item.name.toLowerCase().endsWith('.json'))
-                        : [];
-                } catch (apiError) {
-                    // Si falla la API, usar los datos almacenados localmente
-                    if (apiError?.message?.includes('403')) {
-                        console.warn('Rate limit de GitHub alcanzado. Usando datos locales si existen.');
-                        if (AppState.reportes.length > 0) {
-                            setStatusMessage('Usando reportes almacenados localmente (límite de GitHub alcanzado)', { tipo: 'warning' });
-                            return;
+                    archivosJSON = Array.isArray(indice) ? indice.map(name => ({ name, type: 'file' })) : [];
+                } catch {
+                    // Si no hay índice, intentar con la API (puede fallar por rate limit)
+                    try {
+                        const archivos = await descargarJSON(`${REPORTES_API_URL}?t=${Date.now()}`, {
+                            descripcion: 'el listado de reportes',
+                            requiereGitHubAuth: false
+                        });
+                        archivosJSON = Array.isArray(archivos)
+                            ? archivos.filter(item => item.type === 'file' && item.name.toLowerCase().endsWith('.json'))
+                            : [];
+                    } catch (apiError) {
+                        // Si falla la API, verificar si es por falta de token
+                        if (apiError?.message?.includes('403') || apiError?.message?.includes('401')) {
+                            necesitaToken = true;
+                            // Si hay datos locales, usarlos temporalmente
+                            if (AppState.reportes.length > 0) {
+                                console.warn('Error de autenticación. Usando datos locales temporalmente.');
+                                setStatusMessage('Error de autenticación. Configura un token en "Sincronizar" para actualizar los reportes.', { tipo: 'warning' });
+                                if (mostrarNotificacion) {
+                                    alert('No se pudieron cargar los reportes. Por favor, configura un token de GitHub en el menú "Sincronizar" para acceder a los reportes más recientes.');
+                                }
+                                return;
+                            }
+                            throw new Error('Se requiere un token de GitHub para acceder a los reportes. Por favor, configura un token en el menú "Sincronizar".');
                         }
-                        throw new Error('Límite de solicitudes de GitHub alcanzado. Configura un token en "Sincronizar" o espera unos minutos.');
+                        // Si falla la API, usar los datos almacenados localmente
+                        if (apiError?.message?.includes('403')) {
+                            console.warn('Rate limit de GitHub alcanzado. Usando datos locales si existen.');
+                            if (AppState.reportes.length > 0) {
+                                setStatusMessage('Usando reportes almacenados localmente (límite de GitHub alcanzado)', { tipo: 'warning' });
+                                return;
+                            }
+                            throw new Error('Límite de solicitudes de GitHub alcanzado. Configura un token en "Sincronizar" o espera unos minutos.');
+                        }
+                        throw apiError;
                     }
-                    throw apiError;
                 }
             }
+        } catch (error) {
+            // Si falla y no hay datos locales, pedir token
+            if (AppState.reportes.length === 0) {
+                if (mostrarNotificacion) {
+                    alert('No se pudieron cargar los reportes. Por favor, configura un token de GitHub en el menú "Sincronizar" para acceder a los reportes.');
+                }
+                throw error;
+            }
+            // Si hay datos locales, continuar con ellos pero mostrar advertencia
+            setStatusMessage('Error al actualizar reportes. Usando datos locales. Configura un token para actualizar.', { tipo: 'warning' });
+            if (mostrarNotificacion) {
+                alert('No se pudieron actualizar los reportes. Se están usando los datos almacenados localmente. Configura un token de GitHub en "Sincronizar" para actualizar.');
+            }
+            return;
         }
 
         if (archivosJSON.length === 0) {

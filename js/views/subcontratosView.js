@@ -4,6 +4,8 @@ import { mostrarVistaItems } from './modalView.js';
 
 let chartSubcontrato = null;
 let subcontratoSeleccionado = null;
+let ordenActual = { columna: null, direccion: 'asc' };
+let datosSubcontratosGlobal = [];
 
 export function actualizarSubcontratos() {
     const datos = obtenerDatosFiltrados();
@@ -67,13 +69,25 @@ export function actualizarSubcontratos() {
                 <div class="tabla-header">
                     <h3><i class="fas fa-table"></i> Resumen General de Subcontratos</h3>
                     <div class="tabla-acciones">
+                        <button class="btn-secondary btn-small" id="btnExportarTabla" title="Exportar a Excel">
+                            <i class="fas fa-file-excel"></i>
+                        </button>
                         <button class="btn-secondary btn-small" id="btnExpandirTodos">
-                            <i class="fas fa-expand-alt"></i> Expandir todo
+                            <i class="fas fa-expand-alt"></i> Expandir
                         </button>
                     </div>
                 </div>
+                <div class="tabla-toolbar">
+                    <div class="tabla-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchTablaSubcontratos" placeholder="Buscar subcontrato...">
+                    </div>
+                    <div class="tabla-info">
+                        <span class="tabla-contador"><strong>${subcontratosOrdenados.length}</strong> subcontratos</span>
+                    </div>
+                </div>
                 <div class="tabla-wrapper">
-                    ${generarTablaSubcontratos(subcontratosOrdenados)}
+                    ${generarTablaSubcontratos(subcontratosOrdenados, totales)}
                 </div>
             </div>
         </div>
@@ -291,37 +305,93 @@ function generarListaSubcontratos(subcontratos) {
     }).join('');
 }
 
-function generarTablaSubcontratos(subcontratos) {
+function generarTablaSubcontratos(subcontratos, totales) {
+    // Guardar referencia global para ordenamiento
+    datosSubcontratosGlobal = subcontratos;
+    
+    // Calcular avance total para ordenar y determinar ranking
+    const subcontratosConAvance = subcontratos.map(sub => {
+        const avanceTotal = sub.incorporadas + sub.enEditorial + sub.enProceso;
+        const porcentaje = sub.items.length > 0 ? (avanceTotal / sub.items.length) * 100 : 0;
+        return { ...sub, porcentajeAvance: porcentaje };
+    });
+    
+    // Ordenar por porcentaje para ranking
+    const ranking = [...subcontratosConAvance].sort((a, b) => b.porcentajeAvance - a.porcentajeAvance);
+    
     let html = `
         <table class="subcontratos-table-full">
             <thead>
                 <tr>
                     <th class="col-expand"></th>
-                    <th>Subcontrato</th>
-                    <th class="text-center">Total</th>
-                    <th class="text-center col-green">Incorp.</th>
-                    <th class="text-center col-purple">Editorial</th>
-                    <th class="text-center col-blue">Proceso</th>
-                    <th class="text-center col-yellow">Elaboración</th>
-                    <th class="text-center col-red">Atrasos</th>
-                    <th class="text-center">Obs.</th>
-                    <th>Avance</th>
+                    <th class="sortable" data-sort="nombre">
+                        Subcontrato <i class="fas fa-sort sort-icon"></i>
+                    </th>
+                    <th class="text-center sortable" data-sort="total">
+                        Total <i class="fas fa-sort sort-icon"></i>
+                    </th>
+                    <th class="text-center col-green sortable" data-sort="incorporadas">
+                        Incorp. <i class="fas fa-sort sort-icon"></i>
+                    </th>
+                    <th class="text-center col-purple sortable" data-sort="editorial">
+                        Editorial <i class="fas fa-sort sort-icon"></i>
+                    </th>
+                    <th class="text-center col-blue sortable" data-sort="proceso">
+                        Proceso <i class="fas fa-sort sort-icon"></i>
+                    </th>
+                    <th class="text-center col-yellow sortable" data-sort="elaboracion">
+                        Elaboración <i class="fas fa-sort sort-icon"></i>
+                    </th>
+                    <th class="text-center col-red sortable" data-sort="atrasos">
+                        Atrasos <i class="fas fa-sort sort-icon"></i>
+                    </th>
+                    <th class="text-center sortable" data-sort="observaciones">
+                        Obs. <i class="fas fa-sort sort-icon"></i>
+                    </th>
+                    <th class="sortable" data-sort="avance">
+                        Avance <i class="fas fa-sort sort-icon"></i>
+                    </th>
                     <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
     `;
 
-    subcontratos.forEach(sub => {
+    subcontratos.forEach((sub, index) => {
         // Avance total = incorporadas + en editorial + en proceso
         const avanceTotal = sub.incorporadas + sub.enEditorial + sub.enProceso;
         const porcentaje = sub.items.length > 0 ? Math.round((avanceTotal / sub.items.length) * 100) : 0;
         const pctIncorporadas = sub.items.length > 0 ? Math.round((sub.incorporadas / sub.items.length) * 100) : 0;
         const pctEditorial = sub.items.length > 0 ? Math.round((sub.enEditorial / sub.items.length) * 100) : 0;
         const pctProceso = sub.items.length > 0 ? Math.round((sub.enProceso / sub.items.length) * 100) : 0;
+        
+        // Determinar ranking
+        const posicionRanking = ranking.findIndex(r => r.nombre === sub.nombre);
+        let rankingBadge = '';
+        let rowClass = 'subcontrato-row';
+        
+        if (posicionRanking === 0 && porcentaje > 0) {
+            rankingBadge = '<span class="ranking-badge gold">1°</span>';
+            rowClass += ' top-performer';
+        } else if (posicionRanking === 1 && porcentaje > 0) {
+            rankingBadge = '<span class="ranking-badge silver">2°</span>';
+        } else if (posicionRanking === 2 && porcentaje > 0) {
+            rankingBadge = '<span class="ranking-badge bronze">3°</span>';
+        }
+        
+        // Clase para filas con problemas
+        if (sub.atrasos > 3) {
+            rowClass += ' has-issues';
+        }
+        
+        // Clase de color para el porcentaje
+        let progressClass = 'low';
+        if (porcentaje >= 80) progressClass = 'excellent';
+        else if (porcentaje >= 60) progressClass = 'good';
+        else if (porcentaje >= 40) progressClass = 'warning';
 
         html += `
-            <tr class="subcontrato-row" data-subcontrato="${sub.nombre}">
+            <tr class="${rowClass}" data-subcontrato="${sub.nombre}" data-avance="${porcentaje}">
                 <td class="col-expand">
                     <button class="btn-expand" title="Ver estados detallados">
                         <i class="fas fa-chevron-right"></i>
@@ -329,56 +399,62 @@ function generarTablaSubcontratos(subcontratos) {
                 </td>
                 <td>
                     <div class="subcontrato-cell">
-                        <strong>${sub.nombre}</strong>
-                        <span class="subcontrato-meta">${sub.elaboradores.size} elaborador${sub.elaboradores.size !== 1 ? 'es' : ''}</span>
+                        <div style="display: flex; align-items: center;">
+                            ${rankingBadge}
+                            <strong>${sub.nombre}</strong>
+                        </div>
+                        <span class="subcontrato-meta">
+                            <i class="fas fa-users"></i> ${sub.elaboradores.size} elaborador${sub.elaboradores.size !== 1 ? 'es' : ''}
+                            ${sub.tematicas.size > 0 ? `<span style="margin-left: 8px;"><i class="fas fa-tags"></i> ${sub.tematicas.size} temática${sub.tematicas.size !== 1 ? 's' : ''}</span>` : ''}
+                        </span>
                     </div>
                 </td>
                 <td class="text-center"><strong>${sub.items.length}</strong></td>
                 <td class="text-center col-green">
-                    <span class="badge-pill success">${sub.incorporadas}</span>
+                    <span class="badge-pill success" title="Incorporadas: ${sub.incorporadas} de ${sub.items.length}">${sub.incorporadas}</span>
                 </td>
                 <td class="text-center col-purple">
                     ${sub.enEditorial > 0 
-                        ? `<span class="badge-pill purple">${sub.enEditorial}</span>` 
-                        : '<span class="text-muted">0</span>'}
+                        ? `<span class="badge-pill purple" title="En Editorial: ${sub.enEditorial}">${sub.enEditorial}</span>` 
+                        : '<span class="text-muted">—</span>'}
                 </td>
                 <td class="text-center col-blue">
                     ${sub.enProceso > 0 
-                        ? `<span class="badge-pill info">${sub.enProceso}</span>` 
-                        : '<span class="text-muted">0</span>'}
+                        ? `<span class="badge-pill info" title="En Proceso: ${sub.enProceso}">${sub.enProceso}</span>` 
+                        : '<span class="text-muted">—</span>'}
                 </td>
                 <td class="text-center col-yellow">
                     ${sub.enElaboracion > 0 
-                        ? `<span class="badge-pill warning">${sub.enElaboracion}</span>` 
-                        : '<span class="text-muted">0</span>'}
+                        ? `<span class="badge-pill warning" title="En Elaboración: ${sub.enElaboracion}">${sub.enElaboracion}</span>` 
+                        : '<span class="text-muted">—</span>'}
                 </td>
                 <td class="text-center col-red">
                     ${sub.atrasos > 0 
-                        ? `<span class="badge-pill danger">${sub.atrasos}</span>` 
-                        : '<span class="text-muted">0</span>'}
+                        ? `<span class="badge-pill danger ${sub.atrasos > 3 ? 'pulse' : ''}" title="Atrasos: ${sub.atrasos}"><i class="fas fa-exclamation"></i> ${sub.atrasos}</span>` 
+                        : '<span class="text-muted">—</span>'}
                 </td>
                 <td class="text-center">
                     ${sub.conObservaciones > 0 
-                        ? `<span class="badge-pill danger-light">${sub.conObservaciones}</span>` 
-                        : '<span class="text-muted">0</span>'}
+                        ? `<span class="badge-pill danger-light" title="Con Observaciones: ${sub.conObservaciones}">${sub.conObservaciones}</span>` 
+                        : '<span class="text-muted">—</span>'}
                 </td>
                 <td>
                     <div class="progress-cell">
-                        <div class="progress-bar-table stacked">
-                            <div class="progress-fill success" style="width: ${pctIncorporadas}%" title="Incorporadas: ${sub.incorporadas}"></div>
-                            <div class="progress-fill purple" style="width: ${pctEditorial}%" title="En Editorial: ${sub.enEditorial}"></div>
-                            <div class="progress-fill info" style="width: ${pctProceso}%" title="En Proceso: ${sub.enProceso}"></div>
+                        <div class="progress-bar-table stacked" title="Incorporadas: ${pctIncorporadas}% | Editorial: ${pctEditorial}% | Proceso: ${pctProceso}%">
+                            <div class="progress-fill success" style="width: ${pctIncorporadas}%"></div>
+                            <div class="progress-fill purple" style="width: ${pctEditorial}%"></div>
+                            <div class="progress-fill info" style="width: ${pctProceso}%"></div>
                         </div>
-                        <span class="progress-value">${porcentaje}%</span>
+                        <span class="progress-value ${progressClass}">${porcentaje}%</span>
                     </div>
                 </td>
                 <td>
                     <div class="acciones-cell">
-                        <button class="btn-icon-small btn-ver-items" data-subcontrato="${sub.nombre}" title="Ver items">
+                        <button class="btn-icon-small btn-ver-items" data-subcontrato="${sub.nombre}" title="Ver todos los items">
                             <i class="fas fa-eye"></i>
                         </button>
                         ${sub.atrasos > 0 ? `
-                            <button class="btn-icon-small btn-ver-atrasos danger" data-subcontrato="${sub.nombre}" title="Ver atrasos">
+                            <button class="btn-icon-small btn-ver-atrasos danger" data-subcontrato="${sub.nombre}" title="Ver ${sub.atrasos} atrasos">
                                 <i class="fas fa-exclamation-triangle"></i>
                             </button>
                         ` : ''}
@@ -395,7 +471,38 @@ function generarTablaSubcontratos(subcontratos) {
         `;
     });
 
-    html += '</tbody></table>';
+    html += '</tbody>';
+    
+    // Agregar fila de totales
+    if (totales) {
+        const avanceTotalGeneral = totales.incorporadas + totales.enEditorial + totales.enProceso;
+        const porcentajeTotal = totales.total > 0 ? Math.round((avanceTotalGeneral / totales.total) * 100) : 0;
+        
+        html += `
+            <tfoot>
+                <tr>
+                    <td></td>
+                    <td>
+                        <span class="total-label">
+                            <i class="fas fa-calculator"></i>
+                            <strong>TOTALES</strong>
+                        </span>
+                    </td>
+                    <td class="text-center"><span class="badge-total">${totales.total}</span></td>
+                    <td class="text-center"><span class="badge-total">${totales.incorporadas}</span></td>
+                    <td class="text-center"><span class="badge-total">${totales.enEditorial}</span></td>
+                    <td class="text-center"><span class="badge-total">${totales.enProceso}</span></td>
+                    <td class="text-center"><span class="badge-total">${totales.enElaboracion}</span></td>
+                    <td class="text-center"><span class="badge-total">${totales.atrasos}</span></td>
+                    <td class="text-center"><span class="badge-total">${totales.conObservaciones}</span></td>
+                    <td><span class="badge-total">${porcentajeTotal}%</span></td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        `;
+    }
+    
+    html += '</table>';
     return html;
 }
 
@@ -584,6 +691,7 @@ function inicializarEventosSubcontratos(subcontratos) {
             
             if (detalleRow) {
                 detalleRow.classList.toggle('hidden');
+                btn.classList.toggle('expanded');
                 btn.querySelector('i').classList.toggle('fa-chevron-right');
                 btn.querySelector('i').classList.toggle('fa-chevron-down');
             }
@@ -594,15 +702,92 @@ function inicializarEventosSubcontratos(subcontratos) {
     document.getElementById('btnExpandirTodos')?.addEventListener('click', () => {
         const detalleRows = document.querySelectorAll('.subcontrato-detalle-row');
         const allHidden = Array.from(detalleRows).every(r => r.classList.contains('hidden'));
+        const btn = document.getElementById('btnExpandirTodos');
         
         detalleRows.forEach(row => {
             row.classList.toggle('hidden', !allHidden);
         });
 
-        document.querySelectorAll('.btn-expand i').forEach(icon => {
+        document.querySelectorAll('.btn-expand').forEach(expandBtn => {
+            expandBtn.classList.toggle('expanded', allHidden);
+            const icon = expandBtn.querySelector('i');
             icon.classList.toggle('fa-chevron-right', !allHidden);
             icon.classList.toggle('fa-chevron-down', allHidden);
         });
+        
+        // Actualizar texto del botón
+        if (btn) {
+            btn.innerHTML = allHidden 
+                ? '<i class="fas fa-compress-alt"></i> Colapsar' 
+                : '<i class="fas fa-expand-alt"></i> Expandir';
+        }
+    });
+
+    // Búsqueda en tabla
+    const searchInput = document.getElementById('searchTablaSubcontratos');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const termino = e.target.value.toLowerCase().trim();
+            const filas = document.querySelectorAll('.subcontrato-row');
+            let contadorVisible = 0;
+            
+            filas.forEach(fila => {
+                const subcontrato = fila.dataset.subcontrato.toLowerCase();
+                const visible = subcontrato.includes(termino);
+                fila.style.display = visible ? '' : 'none';
+                
+                // Ocultar también la fila de detalle
+                const detalleRow = document.querySelector(`[data-subcontrato-detalle="${fila.dataset.subcontrato}"]`);
+                if (detalleRow) {
+                    detalleRow.style.display = visible ? '' : 'none';
+                    if (!visible) {
+                        detalleRow.classList.add('hidden');
+                    }
+                }
+                
+                if (visible) contadorVisible++;
+            });
+            
+            // Actualizar contador
+            const contador = document.querySelector('.tabla-contador');
+            if (contador) {
+                contador.innerHTML = `<strong>${contadorVisible}</strong> de ${subcontratos.length} subcontratos`;
+            }
+        });
+    }
+
+    // Ordenamiento de columnas
+    document.querySelectorAll('.subcontratos-table-full th.sortable').forEach(th => {
+        th.addEventListener('click', () => {
+            const columna = th.dataset.sort;
+            const direccion = ordenActual.columna === columna && ordenActual.direccion === 'asc' ? 'desc' : 'asc';
+            
+            ordenarTabla(columna, direccion, subcontratos);
+            
+            // Actualizar estilos de headers
+            document.querySelectorAll('.subcontratos-table-full th.sortable').forEach(header => {
+                header.classList.remove('sorted');
+                const icon = header.querySelector('.sort-icon');
+                if (icon) {
+                    icon.classList.remove('fa-sort-up', 'fa-sort-down');
+                    icon.classList.add('fa-sort');
+                }
+            });
+            
+            th.classList.add('sorted');
+            const icon = th.querySelector('.sort-icon');
+            if (icon) {
+                icon.classList.remove('fa-sort');
+                icon.classList.add(direccion === 'asc' ? 'fa-sort-up' : 'fa-sort-down');
+            }
+            
+            ordenActual = { columna, direccion };
+        });
+    });
+
+    // Exportar tabla
+    document.getElementById('btnExportarTabla')?.addEventListener('click', () => {
+        exportarTablaSubcontratos(subcontratos);
     });
 
     // Botones ver items
@@ -628,6 +813,135 @@ function inicializarEventosSubcontratos(subcontratos) {
             }
         });
     });
+}
+
+function ordenarTabla(columna, direccion, subcontratos) {
+    const tbody = document.querySelector('.subcontratos-table-full tbody');
+    if (!tbody) return;
+    
+    const filas = Array.from(tbody.querySelectorAll('.subcontrato-row'));
+    
+    filas.sort((a, b) => {
+        const subA = subcontratos.find(s => s.nombre === a.dataset.subcontrato);
+        const subB = subcontratos.find(s => s.nombre === b.dataset.subcontrato);
+        
+        if (!subA || !subB) return 0;
+        
+        let valorA, valorB;
+        
+        switch (columna) {
+            case 'nombre':
+                valorA = subA.nombre.toLowerCase();
+                valorB = subB.nombre.toLowerCase();
+                break;
+            case 'total':
+                valorA = subA.items.length;
+                valorB = subB.items.length;
+                break;
+            case 'incorporadas':
+                valorA = subA.incorporadas;
+                valorB = subB.incorporadas;
+                break;
+            case 'editorial':
+                valorA = subA.enEditorial;
+                valorB = subB.enEditorial;
+                break;
+            case 'proceso':
+                valorA = subA.enProceso;
+                valorB = subB.enProceso;
+                break;
+            case 'elaboracion':
+                valorA = subA.enElaboracion;
+                valorB = subB.enElaboracion;
+                break;
+            case 'atrasos':
+                valorA = subA.atrasos;
+                valorB = subB.atrasos;
+                break;
+            case 'observaciones':
+                valorA = subA.conObservaciones;
+                valorB = subB.conObservaciones;
+                break;
+            case 'avance':
+                valorA = parseInt(a.dataset.avance || '0');
+                valorB = parseInt(b.dataset.avance || '0');
+                break;
+            default:
+                return 0;
+        }
+        
+        if (typeof valorA === 'string') {
+            return direccion === 'asc' 
+                ? valorA.localeCompare(valorB) 
+                : valorB.localeCompare(valorA);
+        }
+        
+        return direccion === 'asc' ? valorA - valorB : valorB - valorA;
+    });
+    
+    // Reordenar filas en el DOM
+    filas.forEach(fila => {
+        const detalleRow = document.querySelector(`[data-subcontrato-detalle="${fila.dataset.subcontrato}"]`);
+        tbody.appendChild(fila);
+        if (detalleRow) {
+            tbody.appendChild(detalleRow);
+        }
+    });
+}
+
+function exportarTablaSubcontratos(subcontratos) {
+    // Crear datos para exportación
+    const datos = subcontratos.map(sub => {
+        const avanceTotal = sub.incorporadas + sub.enEditorial + sub.enProceso;
+        const porcentaje = sub.items.length > 0 ? Math.round((avanceTotal / sub.items.length) * 100) : 0;
+        
+        return {
+            'Subcontrato': sub.nombre,
+            'Total Items': sub.items.length,
+            'Incorporadas': sub.incorporadas,
+            'En Editorial': sub.enEditorial,
+            'En Proceso': sub.enProceso,
+            'En Elaboración': sub.enElaboracion,
+            'Atrasos': sub.atrasos,
+            'Con Observaciones': sub.conObservaciones,
+            'Avance (%)': porcentaje,
+            'Elaboradores': sub.elaboradores.size,
+            'Revisores': sub.revisores.size,
+            'Temáticas': sub.tematicas.size
+        };
+    });
+    
+    // Verificar si existe XLSX
+    if (typeof XLSX !== 'undefined') {
+        const ws = XLSX.utils.json_to_sheet(datos);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Subcontratos');
+        
+        // Ajustar anchos de columna
+        const maxWidth = datos.reduce((acc, row) => {
+            Object.keys(row).forEach((key, i) => {
+                const len = String(row[key]).length;
+                acc[i] = Math.max(acc[i] || 10, len + 2);
+            });
+            return acc;
+        }, {});
+        
+        ws['!cols'] = Object.values(maxWidth).map(w => ({ wch: Math.min(w, 30) }));
+        
+        const fecha = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(wb, `Resumen_Subcontratos_${fecha}.xlsx`);
+    } else {
+        // Fallback: exportar como CSV
+        const headers = Object.keys(datos[0] || {}).join(',');
+        const rows = datos.map(d => Object.values(d).join(','));
+        const csv = [headers, ...rows].join('\n');
+        
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `Resumen_Subcontratos_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+    }
 }
 
 function truncar(texto, max) {
