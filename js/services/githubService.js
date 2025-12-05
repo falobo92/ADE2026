@@ -1,31 +1,21 @@
 const GITHUB_TOKEN_KEY = 'githubToken';
 
-// Token de GitHub con permisos de lectura para acceso automático al repositorio
-const GITHUB_TOKEN_FALLBACK = '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';
-
 /**
- * Obtiene el token de GitHub.
- * Primero intenta obtenerlo de localStorage (para permitir sobreescritura manual).
- * Si no existe en localStorage, retorna el token hardcoded como fallback.
- * @returns {string} Token de GitHub (nunca retorna null o string vacío)
+ * Obtiene el token de GitHub desde localStorage (opcional).
+ * El sistema ahora funciona sin token usando la API pública de GitHub.
+ * @returns {string} Token de GitHub o string vacío
  */
 export function getGitHubToken() {
     try {
-        const storedToken = localStorage.getItem(GITHUB_TOKEN_KEY);
-        if (storedToken && storedToken.trim() !== '') {
-            return storedToken;
-        }
+        return localStorage.getItem(GITHUB_TOKEN_KEY) || '';
     } catch (error) {
-        console.error('No fue posible leer el token de GitHub desde localStorage:', error);
+        console.error('No fue posible leer el token de GitHub:', error);
+        return '';
     }
-    
-    // Fallback: retornar el token hardcoded
-    return GITHUB_TOKEN_FALLBACK;
 }
 
 /**
- * Guarda un token de GitHub en localStorage.
- * Si se pasa un valor vacío o null, elimina el token de localStorage.
+ * Guarda un token de GitHub en localStorage (opcional).
  * @param {string} token - Token a guardar
  */
 export function saveGitHubToken(token) {
@@ -42,7 +32,6 @@ export function saveGitHubToken(token) {
 
 /**
  * Elimina el token de GitHub de localStorage.
- * Nota: Después de limpiar, getGitHubToken() retornará el token hardcoded.
  */
 export function clearGitHubToken() {
     try {
@@ -53,8 +42,7 @@ export function clearGitHubToken() {
 }
 
 /**
- * Verifica si hay un token de GitHub disponible.
- * Siempre retorna true gracias al token hardcoded de fallback.
+ * Verifica si hay un token de GitHub guardado.
  * @returns {boolean}
  */
 export function hasGitHubToken() {
