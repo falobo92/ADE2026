@@ -58,11 +58,27 @@ export function actualizarFiltros() {
         return;
     }
 
-    const semanas = [...new Set(
-        datos
-            .map(d => d.SemanaReporte)
-            .filter(valor => valor !== undefined && valor !== null)
-    )].sort((a, b) => b - a);
+    // Obtener semanas con su fecha más reciente para ordenar correctamente
+    const semanasConFecha = {};
+    datos.forEach(d => {
+        const semana = d.SemanaReporte;
+        const fecha = d.FechaReporte;
+        if (semana !== undefined && semana !== null && fecha) {
+            if (!semanasConFecha[semana] || fecha > semanasConFecha[semana]) {
+                semanasConFecha[semana] = fecha;
+            }
+        }
+    });
+    
+    // Ordenar semanas por fecha más reciente (descendente)
+    const semanas = Object.keys(semanasConFecha)
+        .map(s => parseInt(s, 10))
+        .sort((a, b) => {
+            const fechaA = semanasConFecha[a] || '';
+            const fechaB = semanasConFecha[b] || '';
+            // Ordenar por fecha descendente (más reciente primero)
+            return fechaB.localeCompare(fechaA);
+        });
     
     // Calcular fechas: si hay semana seleccionada, solo mostrar fechas de esa semana
     let fechas;

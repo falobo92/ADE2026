@@ -102,4 +102,4 @@ Para evitar límites de la API pública:
 
 ## Fecha de Entrega
 
-12 de enero de 2026
+27 de febrero de 2026

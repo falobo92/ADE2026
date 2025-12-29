@@ -11,7 +11,7 @@ import { actualizarFiltros } from '../views/filterControls.js';
 import { setStatusMessage } from '../ui/statusBar.js';
 import { formatearFechaParaMostrar } from '../utils/date.js';
 
-const MAX_REPORTES_DESCARGA = 25;
+const MAX_REPORTES_DESCARGA = 100;
 
 export async function cargarDatosFijosEnLinea(opciones = {}) {
     const { mostrarNotificacion = false } = opciones;
@@ -257,8 +257,32 @@ function ordenarReportesPorFecha(reportes = []) {
 
 function limitarReportesRecientes(listado, limite) {
     if (listado.length <= limite) return listado;
-    // Ordenar descendente por nombre (fecha en el nombre)
-    return [...listado].sort((a, b) => (b.name || '').localeCompare(a.name || '')).slice(0, limite);
+    
+    // Extraer fecha (YYYY-MM-DD) del nombre del archivo
+    const extraerFecha = (nombre) => {
+        const match = nombre.match(/(\d{4}-\d{2}-\d{2})/);
+        return match ? match[1] : '';
+    };
+
+    // Extraer número de semana del nombre del archivo
+    const extraerSemana = (nombre) => {
+        const match = nombre.match(/Semana(\d+)/i);
+        return match ? parseInt(match[1], 10) : 0;
+    };
+
+    // Ordenar por fecha descendente, luego por semana descendente
+    return [...listado].sort((a, b) => {
+        const fechaA = extraerFecha(a.name || '');
+        const fechaB = extraerFecha(b.name || '');
+        
+        if (fechaA && fechaB && fechaA !== fechaB) {
+            return fechaB.localeCompare(fechaA);
+        }
+        
+        const semA = extraerSemana(a.name || '');
+        const semB = extraerSemana(b.name || '');
+        return semB - semA;
+    }).slice(0, limite);
 }
 
 async function leerArchivo(archivo) {

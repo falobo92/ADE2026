@@ -551,9 +551,18 @@ function inicializarGrafico(datosGrafico, semanaActual, stats) {
     const maxValue = Math.max(metaTotal, ...incorporadas.filter(v => v !== null), 1);
     const suggestedMax = Math.ceil(maxValue * 1.15);
 
+    // Crear gradientes mejorados
+    const gradientInc = ctx.createLinearGradient(0, 0, 0, 400);
+    gradientInc.addColorStop(0, 'rgba(16, 185, 129, 0.9)');
+    gradientInc.addColorStop(1, 'rgba(5, 150, 105, 0.95)');
+    
+    const gradientEdit = ctx.createLinearGradient(0, 0, 0, 400);
+    gradientEdit.addColorStop(0, 'rgba(139, 92, 246, 0.9)');
+    gradientEdit.addColorStop(1, 'rgba(124, 58, 237, 0.95)');
+    
     // Colores con transparencia para semanas sin datos
-    const colorIncorporadas = tieneDatos.map(tiene => tiene ? 'rgba(16, 185, 129, 0.9)' : 'rgba(16, 185, 129, 0.15)');
-    const colorEditorial = tieneDatos.map(tiene => tiene ? 'rgba(139, 92, 246, 0.9)' : 'rgba(139, 92, 246, 0.15)');
+    const colorIncorporadas = tieneDatos.map(tiene => tiene ? gradientInc : 'rgba(16, 185, 129, 0.15)');
+    const colorEditorial = tieneDatos.map(tiene => tiene ? gradientEdit : 'rgba(139, 92, 246, 0.15)');
     
     // Marcar semana actual
     const indexActual = semanas.indexOf(semanaActual);
@@ -565,11 +574,12 @@ function inicializarGrafico(datosGrafico, semanaActual, stats) {
             backgroundColor: colorIncorporadas,
             borderColor: tieneDatos.map(tiene => tiene ? '#059669' : '#d1fae5'),
             borderWidth: 1,
-            borderRadius: 4,
+            borderRadius: 0,
             stack: 'avance',
             order: 2,
-            barPercentage: 0.75,
-            categoryPercentage: 0.85
+            barPercentage: 0.8,
+            categoryPercentage: 0.9,
+            maxBarThickness: 60
         },
         {
             label: 'En Editorial',
@@ -577,49 +587,66 @@ function inicializarGrafico(datosGrafico, semanaActual, stats) {
             backgroundColor: colorEditorial,
             borderColor: tieneDatos.map(tiene => tiene ? '#7c3aed' : '#ede9fe'),
             borderWidth: 1,
-            borderRadius: 4,
+            borderRadius: 0,
             stack: 'avance',
             order: 2,
-            barPercentage: 0.75,
-            categoryPercentage: 0.85
+            barPercentage: 0.8,
+            categoryPercentage: 0.9,
+            maxBarThickness: 60
         },
         {
             label: `Meta (${metaTotal})`,
             data: metaLine,
             type: 'line',
             borderColor: '#dc2626',
-            backgroundColor: 'rgba(220, 38, 38, 0.1)',
-            borderWidth: 2,
-            borderDash: [8, 4],
+            backgroundColor: 'rgba(220, 38, 38, 0.08)',
+            borderWidth: 3,
+            borderDash: [10, 5],
             tension: 0,
-            fill: false,
+            fill: {
+                target: 'origin',
+                above: 'rgba(220, 38, 38, 0.05)'
+            },
             pointRadius: 0,
-            pointHoverRadius: 0,
+            pointHoverRadius: 6,
+            pointHoverBackgroundColor: '#dc2626',
+            pointHoverBorderColor: '#ffffff',
+            pointHoverBorderWidth: 2,
             order: 1
         }
     ] : [
         {
             label: 'Incorporadas',
             data: incorporadas,
-            backgroundColor: 'rgba(16, 185, 129, 0.3)',
+            backgroundColor: 'rgba(16, 185, 129, 0.25)',
             borderColor: '#10b981',
-            borderWidth: 2,
+            borderWidth: 3,
             fill: true,
-            tension: 0.4,
-            pointRadius: tieneDatos.map(tiene => tiene ? 4 : 0),
+            tension: 0.3,
+            pointRadius: tieneDatos.map(tiene => tiene ? 5 : 0),
+            pointHoverRadius: 7,
             pointBackgroundColor: '#10b981',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2,
+            pointHoverBackgroundColor: '#059669',
+            pointHoverBorderWidth: 3,
             spanGaps: true
         },
         {
             label: 'En Editorial',
             data: enEditorial.map((v, i) => v !== null && incorporadas[i] !== null ? v + incorporadas[i] : null),
-            backgroundColor: 'rgba(139, 92, 246, 0.3)',
+            backgroundColor: 'rgba(139, 92, 246, 0.25)',
             borderColor: '#8b5cf6',
-            borderWidth: 2,
+            borderWidth: 3,
             fill: true,
-            tension: 0.4,
-            pointRadius: tieneDatos.map(tiene => tiene ? 4 : 0),
+            tension: 0.3,
+            pointRadius: tieneDatos.map(tiene => tiene ? 5 : 0),
+            pointHoverRadius: 7,
             pointBackgroundColor: '#8b5cf6',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2,
+            pointHoverBackgroundColor: '#7c3aed',
+            pointHoverBorderWidth: 3,
             spanGaps: true
         },
         {
@@ -627,12 +654,15 @@ function inicializarGrafico(datosGrafico, semanaActual, stats) {
             data: metaLine,
             borderColor: '#dc2626',
             backgroundColor: 'transparent',
-            borderWidth: 2,
-            borderDash: [8, 4],
+            borderWidth: 3,
+            borderDash: [10, 5],
             fill: false,
             tension: 0,
             pointRadius: 0,
-            pointHoverRadius: 0
+            pointHoverRadius: 6,
+            pointHoverBackgroundColor: '#dc2626',
+            pointHoverBorderColor: '#ffffff',
+            pointHoverBorderWidth: 2
         }
     ];
 
@@ -643,24 +673,39 @@ function inicializarGrafico(datosGrafico, semanaActual, stats) {
             responsive: true,
             maintainAspectRatio: false,
             animation: { 
-                duration: 1000, 
-                easing: 'easeOutQuart'
+                duration: 1500, 
+                easing: 'easeOutQuart',
+                animateRotate: chartTipo === 'bar',
+                animateScale: true
             },
             interaction: { 
                 mode: 'index', 
-                intersect: false 
+                intersect: false,
+                axis: 'x'
             },
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                    backgroundColor: 'rgba(30, 41, 59, 0.95)',
-                    padding: 16,
-                    cornerRadius: 10,
-                    titleFont: { size: 14, weight: '700' },
-                    bodyFont: { size: 12 },
-                    bodySpacing: 8,
-                    boxPadding: 6,
+                    backgroundColor: 'rgba(30, 41, 59, 0.98)',
+                    padding: 18,
+                    cornerRadius: 0,
+                    titleFont: { 
+                        size: 14, 
+                        weight: '700',
+                        family: 'Inter'
+                    },
+                    bodyFont: { 
+                        size: 13,
+                        weight: '500',
+                        family: 'Inter'
+                    },
+                    bodySpacing: 10,
+                    boxPadding: 8,
                     usePointStyle: true,
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    borderWidth: 1,
+                    titleColor: '#ffffff',
+                    bodyColor: '#e2e8f0',
                     filter: (item) => {
                         // No mostrar tooltip para la línea de meta
                         if (item.dataset.label?.startsWith('Meta')) return false;
@@ -677,21 +722,29 @@ function inicializarGrafico(datosGrafico, semanaActual, stats) {
                             const value = ctx.parsed.y || 0;
                             const datasetLabel = ctx.dataset.label;
                             const icons = { 'Incorporadas': '✅', 'En Editorial': '📝' };
-                            return ` ${icons[datasetLabel] || ''} ${datasetLabel}: ${value}`;
+                            return `  ${icons[datasetLabel] || ''} ${datasetLabel}: ${value} preguntas`;
                         },
+                        labelColor: ctx => ({
+                            borderColor: ctx.dataset.borderColor || '#94a3b8',
+                            backgroundColor: ctx.dataset.borderColor || '#94a3b8',
+                            borderWidth: 3,
+                            borderRadius: 0
+                        }),
                         afterBody: (items) => {
                             const index = items[0]?.dataIndex;
                             if (index === undefined || !tieneDatos[index]) return '';
                             
                             const inc = incorporadas[index] || 0;
+                            const edit = enEditorial[index] || 0;
                             const faltan = metaTotal - inc;
                             const pct = metaTotal > 0 ? ((inc / metaTotal) * 100).toFixed(1) : 0;
                             
                             return [
                                 '',
-                                `━━━━━━━━━━━━━━━━━━`,
+                                '━━━━━━━━━━━━━━━━━━',
                                 `🎯 Avance: ${pct}%`,
-                                `📋 Faltan: ${faltan} preguntas`
+                                `📋 Faltan: ${faltan} preguntas`,
+                                `📝 En Editorial: ${edit} preguntas`
                             ];
                         }
                     }
@@ -700,32 +753,49 @@ function inicializarGrafico(datosGrafico, semanaActual, stats) {
             scales: {
                 x: {
                     grid: { 
-                        display: false 
+                        display: false,
+                        drawBorder: false
                     },
                     ticks: { 
-                        font: { size: 11, weight: '600' },
+                        font: { 
+                            size: 11, 
+                            weight: '600',
+                            family: 'Inter'
+                        },
                         color: (context) => {
                             const index = context.index;
                             if (semanas[index] === semanaActual) return '#f59e0b';
                             return tieneDatos[index] ? '#475569' : '#94a3b8';
-                        }
+                        },
+                        padding: 12
                     },
-                    border: { display: false }
+                    border: { 
+                        display: true,
+                        color: '#e2e8f0'
+                    }
                 },
                 y: {
                     beginAtZero: true,
                     suggestedMax: suggestedMax,
                     grid: { 
-                        color: 'rgba(0,0,0,0.05)',
-                        drawBorder: false
+                        color: 'rgba(0, 0, 0, 0.04)',
+                        drawBorder: false,
+                        lineWidth: 1
                     },
                     ticks: { 
                         precision: 0, 
-                        font: { size: 11 },
-                        padding: 10,
+                        font: { 
+                            size: 11,
+                            weight: '500',
+                            family: 'Inter'
+                        },
+                        padding: 12,
                         color: '#64748b'
                     },
-                    border: { display: false }
+                    border: { 
+                        display: true,
+                        color: '#e2e8f0'
+                    }
                 }
             }
         }

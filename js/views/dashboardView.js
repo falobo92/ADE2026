@@ -628,46 +628,81 @@ function inicializarGraficoDistribucion(datos) {
         destruirGraficoCanvas(canvas);
         const ctx = canvas.getContext('2d');
 
+        // Crear gradientes mejorados para cada segmento
+        const gradients = datosGrafico.map((d, i) => {
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            const baseColor = d.color;
+            gradient.addColorStop(0, baseColor);
+            gradient.addColorStop(1, baseColor + 'DD');
+            return gradient;
+        });
+
         chartTotalGeneral = new Chart(ctx, {
             type: 'doughnut',
             data: {
                 labels: datosGrafico.map(d => d.label),
                 datasets: [{
                     data: datosGrafico.map(d => d.value),
-                    backgroundColor: datosGrafico.map(d => d.color),
-                    borderWidth: 2,
+                    backgroundColor: datosGrafico.map((d, i) => {
+                        // Crear gradiente radial para cada color
+                        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 200);
+                        const baseColor = d.color;
+                        gradient.addColorStop(0, baseColor);
+                        gradient.addColorStop(0.7, baseColor);
+                        gradient.addColorStop(1, baseColor + 'CC');
+                        return gradient;
+                    }),
+                    borderWidth: 3,
                     borderColor: '#ffffff',
-                    hoverOffset: 6
+                    hoverOffset: 12,
+                    hoverBorderWidth: 4,
+                    spacing: 2
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                layout: { padding: 10 },
-                animation: { duration: 600, easing: 'easeOutQuart' },
+                layout: { padding: 15 },
+                animation: { 
+                    duration: 1200, 
+                    easing: 'easeOutQuart',
+                    animateRotate: true,
+                    animateScale: true
+                },
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                        backgroundColor: 'rgba(30, 41, 59, 0.95)',
-                        padding: 12,
-                        titleFont: { size: 13, weight: '600' },
-                        bodyFont: { size: 12 },
-                        cornerRadius: 8,
+                        backgroundColor: 'rgba(30, 41, 59, 0.98)',
+                        padding: 16,
+                        titleFont: { size: 14, weight: '700', family: 'Inter' },
+                        bodyFont: { size: 13, weight: '500', family: 'Inter' },
+                        cornerRadius: 0,
                         displayColors: true,
-                        boxPadding: 6,
+                        boxPadding: 8,
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1,
+                        titleColor: '#ffffff',
+                        bodyColor: '#e2e8f0',
                         callbacks: {
                             label: ctx => {
                                 const val = ctx.parsed || 0;
                                 const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
-                                return ` ${val} (${pct}%)`;
-                            }
+                                return `  ${val} preguntas (${pct}%)`;
+                            },
+                            labelColor: ctx => ({
+                                borderColor: datosGrafico[ctx.dataIndex]?.color || '#94a3b8',
+                                backgroundColor: datosGrafico[ctx.dataIndex]?.color || '#94a3b8',
+                                borderWidth: 3,
+                                borderRadius: 0
+                            })
                         }
                     }
                 },
-                cutout: '68%',
+                cutout: '70%',
                 onHover: (e, els) => {
                     if (e.native?.target) {
                         e.native.target.style.cursor = els.length ? 'pointer' : 'default';
+                        e.native.target.style.transition = 'transform 0.2s ease';
                     }
                 },
                 onClick: (_, els) => {
@@ -690,14 +725,22 @@ function inicializarGraficoDistribucion(datos) {
                     const ctx = chart.ctx;
 
                     ctx.save();
-                    ctx.font = 'bold 1.75rem Inter, sans-serif';
+                    // Texto principal con sombra
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
+                    ctx.shadowBlur = 4;
+                    ctx.shadowOffsetX = 0;
+                    ctx.shadowOffsetY = 2;
+                    ctx.font = 'bold 2rem Inter, sans-serif';
                     ctx.fillStyle = '#1e293b';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
-                    ctx.fillText(total.toString(), cx, cy - 6);
-                    ctx.font = '500 0.7rem Inter, sans-serif';
+                    ctx.fillText(total.toString(), cx, cy - 8);
+                    
+                    // Texto secundario
+                    ctx.shadowBlur = 0;
+                    ctx.font = '500 0.75rem Inter, sans-serif';
                     ctx.fillStyle = '#64748b';
-                    ctx.fillText('Preguntas', cx, cy + 14);
+                    ctx.fillText('Preguntas', cx, cy + 16);
                     ctx.restore();
                 }
             }]
@@ -714,55 +757,252 @@ function inicializarGraficoProgramacion(data) {
     const canvas = document.getElementById('chartProgramacion');
     if (!canvas) return;
 
+    // Guardar referencia a las claves de fechas para el evento click
+    const { claves, etiquetas } = getProgramacionConfig();
+
     setTimeout(() => {
         destruirGraficoCanvas(canvas);
         const ctx = canvas.getContext('2d');
+
+        // Mejorar datasets con gradientes y bordes
+        const datasetsMejorados = data.datasets.map((dataset, index) => {
+            const baseColor = dataset.backgroundColor || getColor(dataset.label);
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, baseColor.replace('CC', 'FF'));
+            gradient.addColorStop(1, baseColor);
+            
+            return {
+                ...dataset,
+                backgroundColor: gradient,
+                borderColor: dataset.data.map(v => v > 0 ? baseColor.replace('CC', 'FF') : 'transparent'),
+                borderWidth: dataset.data.map(v => v > 0 ? 1 : 0),
+                borderRadius: 0,
+                borderSkipped: false,
+                maxBarThickness: 60,
+                minBarLength: 0
+            };
+        });
 
         chartProgramacion = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: data.labels,
-                datasets: data.datasets
+                datasets: datasetsMejorados
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                interaction: { mode: 'index', intersect: false },
+                interaction: { 
+                    mode: 'index', 
+                    intersect: false,
+                    axis: 'x'
+                },
+                animation: {
+                    duration: 1000,
+                    easing: 'easeOutQuart'
+                },
                 plugins: {
                     legend: {
                         position: 'bottom',
                         labels: {
                             usePointStyle: true,
-                            pointStyle: 'rectRounded',
-                            padding: 16,
-                            font: { size: 11 }
+                            pointStyle: 'circle',
+                            padding: 20,
+                            font: { 
+                                size: 12, 
+                                weight: '500',
+                                family: 'Inter'
+                            },
+                            color: '#475569',
+                            generateLabels: (chart) => {
+                                return chart.data.datasets.map((dataset, i) => ({
+                                    text: dataset.label,
+                                    fillStyle: dataset.backgroundColor,
+                                    strokeStyle: getColor(dataset.label),
+                                    lineWidth: 2,
+                                    hidden: false,
+                                    index: i
+                                }));
+                            }
                         }
                     },
                     tooltip: {
-                        backgroundColor: 'rgba(30, 41, 59, 0.95)',
-                        padding: 12,
-                        cornerRadius: 8,
+                        backgroundColor: 'rgba(30, 41, 59, 0.98)',
+                        padding: 16,
+                        cornerRadius: 0,
+                        titleFont: { 
+                            size: 13, 
+                            weight: '700',
+                            family: 'Inter'
+                        },
+                        bodyFont: { 
+                            size: 12, 
+                            weight: '500',
+                            family: 'Inter'
+                        },
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1,
+                        titleColor: '#ffffff',
+                        bodyColor: '#e2e8f0',
+                        displayColors: true,
+                        boxPadding: 8,
+                        filter: (tooltipItem) => {
+                            // Solo mostrar estados con valor > 0
+                            return (tooltipItem.parsed.y || 0) > 0;
+                        },
                         callbacks: {
-                            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y || 0}`
+                            title: (items) => {
+                                return items[0]?.label || '';
+                            },
+                            label: ctx => {
+                                const value = ctx.parsed.y || 0;
+                                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return `  ${ctx.dataset.label}: ${value} (${pct}%)`;
+                            },
+                            labelColor: ctx => ({
+                                borderColor: getColor(ctx.dataset.label),
+                                backgroundColor: getColor(ctx.dataset.label),
+                                borderWidth: 0,
+                                borderRadius: 0
+                            }),
+                            footer: (items) => {
+                                const total = items.reduce((sum, item) => sum + (item.parsed.y || 0), 0);
+                                return total > 0 ? [`Total: ${total} preguntas`, '(Clic para ver detalle)'] : [];
+                            }
                         }
                     }
                 },
                 scales: {
                     x: {
                         stacked: true,
-                        grid: { display: false },
-                        ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 20 }
+                        grid: { 
+                            display: false,
+                            drawBorder: false
+                        },
+                        ticks: { 
+                            font: { 
+                                size: 11, 
+                                weight: '500',
+                                family: 'Inter'
+                            },
+                            color: '#64748b',
+                            maxRotation: 45, 
+                            minRotation: 20,
+                            padding: 10,
+                            autoSkip: false,
+                            maxTicksLimit: undefined
+                        },
+                        border: {
+                            display: true,
+                            color: '#e2e8f0'
+                        }
                     },
                     y: {
                         stacked: true,
                         beginAtZero: true,
-                        grid: { color: 'rgba(0,0,0,0.05)' },
-                        ticks: { precision: 0, font: { size: 10 } }
+                        grid: { 
+                            color: 'rgba(0, 0, 0, 0.04)',
+                            drawBorder: false,
+                            lineWidth: 1
+                        },
+                        ticks: { 
+                            precision: 0, 
+                            font: { 
+                                size: 11,
+                                weight: '500',
+                                family: 'Inter'
+                            },
+                            color: '#64748b',
+                            padding: 12
+                        },
+                        border: {
+                            display: true,
+                            color: '#e2e8f0'
+                        }
+                    }
+                },
+                onHover: (e, els) => {
+                    if (e.native?.target) {
+                        e.native.target.style.cursor = els.length ? 'pointer' : 'default';
+                    }
+                },
+                onClick: (_, els) => {
+                    if (els.length > 0) {
+                        const index = els[0].index;
+                        const labelClicked = data.labels[index];
+                        
+                        // Encontrar la clave de fecha correspondiente a la etiqueta clickeada
+                        let fechaClave = null;
+                        for (let i = 0; i < claves.length; i++) {
+                            const clave = claves[i];
+                            const etiqueta = etiquetas[clave] || formatearFechaCorta(clave);
+                            if (etiqueta === labelClicked) {
+                                fechaClave = clave;
+                                break;
+                            }
+                        }
+                        
+                        if (fechaClave) {
+                            // Filtrar preguntas por la fecha de programación clickeada
+                            const preguntasFiltradas = filtrarPreguntasPorFechaProgramacion(fechaClave, claves);
+                            if (preguntasFiltradas.length > 0) {
+                                mostrarVistaItems(`Programación: ${labelClicked}`, preguntasFiltradas);
+                            }
+                        }
                     }
                 }
             }
         });
     }, 200);
+}
+
+/**
+ * Filtra las preguntas que corresponden a una fecha de programación específica
+ * @param {string} fechaClave - La clave de fecha (formato ISO YYYY-MM-DD)
+ * @param {Array} todasLasClaves - Todas las claves de fechas disponibles
+ * @returns {Array} - Preguntas filtradas
+ */
+function filtrarPreguntasPorFechaProgramacion(fechaClave, todasLasClaves) {
+    const datos = obtenerDatosFiltrados();
+    const estadosProg = ['En elaboración', 'En revisor técnico', 'Con observaciones', 'En cartografía', 'En editorial', 'Incorporada'];
+    
+    // Parsear todas las fechas de control ordenadas
+    const fechasControl = todasLasClaves
+        .map(c => ({ clave: c, fecha: parseFechaFlexible(c) }))
+        .filter(x => x.fecha);
+    
+    const fechaObjetivo = parseFechaFlexible(fechaClave);
+    if (!fechaObjetivo) return [];
+    
+    // Encontrar el índice de la fecha objetivo
+    const indiceObjetivo = fechasControl.findIndex(fc => fc.clave === fechaClave);
+    
+    // Obtener la fecha anterior (si existe) para definir el rango
+    const fechaAnterior = indiceObjetivo > 0 ? fechasControl[indiceObjetivo - 1].fecha : null;
+    
+    return datos.filter(item => {
+        if (!estadosProg.includes(item.Estado)) return false;
+        
+        // Para incorporadas, usar FechaReporte si no hay FechaEntrega
+        let fechaReferencia = item.FechaEntrega;
+        if (!fechaReferencia && item.Estado === 'Incorporada' && item.FechaReporte) {
+            fechaReferencia = item.FechaReporte;
+        }
+        if (!fechaReferencia) return false;
+        
+        const fechaEntrega = parseFechaFlexible(fechaReferencia);
+        if (!fechaEntrega) return false;
+        
+        // Verificar si la fecha cae en este período
+        // El período va desde el día después de la fecha anterior hasta la fecha objetivo (inclusive)
+        if (fechaAnterior) {
+            return fechaEntrega > fechaAnterior && fechaEntrega <= fechaObjetivo;
+        } else {
+            // Si es la primera fecha, incluir todo lo anterior o igual
+            return fechaEntrega <= fechaObjetivo;
+        }
+    });
 }
 
 function prepararProgramacion(datos) {
@@ -818,9 +1058,9 @@ function prepararProgramacion(datos) {
         data: llavesOrd.map(k => agrupado[k]?.[e] || 0),
         backgroundColor: getColor(e) + 'CC',
         borderColor: '#ffffff',
-        borderWidth: 1,
-        borderRadius: 4,
-        maxBarThickness: 40
+        borderWidth: llavesOrd.map(k => (agrupado[k]?.[e] || 0) > 0 ? 1 : 0),
+        borderRadius: 0,
+        maxBarThickness: 50
     }));
 
     const tabla = llavesOrd.map(k => ({
@@ -929,13 +1169,13 @@ function generarInformePDF() {
             };
             const colors = colorMap[a.tipo] || colorMap.muted;
             return `
-                <div style="background: ${colors.bg}; border-left: 4px solid ${colors.border}; padding: 12px 16px; margin-bottom: 10px; border-radius: 4px;">
+                <div style="background: ${colors.bg}; border-left: 4px solid ${colors.border}; padding: 12px 16px; margin-bottom: 10px; border-radius: 0;">
                     <div style="font-weight: 600; color: ${colors.text}; margin-bottom: 4px;">${a.titulo}</div>
                     <div style="font-size: 12px; color: ${colors.text};">${a.descripcion}</div>
                 </div>
             `;
         }).join('')
-        : '<div style="padding: 16px; text-align: center; color: #059669; background: #d1fae5; border-radius: 6px;"><strong>✓ Sin alertas críticas</strong></div>';
+        : '<div style="padding: 16px; text-align: center; color: #059669; background: #d1fae5; border-radius: 0;"><strong>✓ Sin alertas críticas</strong></div>';
 
     // Calcular porcentajes para barra de progreso
     const pctIncorporadas = datos.length > 0 ? (kpis.incorporadas / datos.length) * 100 : 0;
@@ -2026,7 +2266,7 @@ function prepararDatosEvolucion() {
 // Gráfico de Evolución Temporal con barras apiladas
 function generarGraficoEvolucion(evolucionData) {
     if (evolucionData.length === 0) {
-        return '<div style="padding: 16px; text-align: center; color: #64748b; background: #f1f5f9; border-radius: 6px;">No hay datos de evolución disponibles</div>';
+        return '<div style="padding: 16px; text-align: center; color: #64748b; background: #f1f5f9; border-radius: 0;">No hay datos de evolución disponibles</div>';
     }
 
     const maxTotal = Math.max(...evolucionData.map(d => d.total));
@@ -2065,7 +2305,7 @@ function generarGraficoEvolucion(evolucionData) {
                 <td style="padding: 6px 10px; border-bottom: 1px solid #e2e8f0; text-align: center; font-size: 10px;">${item.enProceso}</td>
                 <td style="padding: 6px 10px; border-bottom: 1px solid #e2e8f0; text-align: center;">
                     <div style="display: flex; align-items: center; gap: 6px;">
-                        <div style="flex: 1; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+                        <div style="flex: 1; height: 6px; background: #e2e8f0; border-radius: 0; overflow: hidden;">
                             <div style="width: ${pctAvance}%; height: 100%; background: linear-gradient(90deg, #059669, #10b981);"></div>
                         </div>
                         <span style="font-weight: 600; font-size: 10px; min-width: 35px;">${pctAvance}%</span>
@@ -2162,7 +2402,7 @@ function prepararDatosSubcontratos(datos) {
 // Gráfico Visual de Subcontratos
 function generarGraficoSubcontratos(subcontratosData) {
     if (subcontratosData.length === 0) {
-        return '<div style="padding: 16px; text-align: center; color: #64748b; background: #f1f5f9; border-radius: 6px;">No hay datos de subcontratos disponibles</div>';
+        return '<div style="padding: 16px; text-align: center; color: #64748b; background: #f1f5f9; border-radius: 0;">No hay datos de subcontratos disponibles</div>';
     }
 
     // Calcular totales
@@ -2182,23 +2422,23 @@ function generarGraficoSubcontratos(subcontratosData) {
     // KPIs de Subcontratos
     const kpisHTML = `
         <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px;">
-            <div style="background: linear-gradient(135deg, #1a365d, #2c5282); color: white; padding: 16px; border-radius: 8px; text-align: center;">
+            <div style="background: linear-gradient(135deg, #1a365d, #2c5282); color: white; padding: 16px; border-radius: 0; text-align: center;">
                 <div style="font-size: 28px; font-weight: 700;">${subcontratosData.length}</div>
                 <div style="font-size: 10px; opacity: 0.9; text-transform: uppercase;">Subcontratos</div>
             </div>
-            <div style="background: white; border: 2px solid #059669; padding: 16px; border-radius: 8px; text-align: center;">
+            <div style="background: white; border: 2px solid #059669; padding: 16px; border-radius: 0; text-align: center;">
                 <div style="font-size: 28px; font-weight: 700; color: #059669;">${totales.incorporadas}</div>
                 <div style="font-size: 10px; color: #64748b; text-transform: uppercase;">Incorporadas</div>
             </div>
-            <div style="background: white; border: 2px solid #8b5cf6; padding: 16px; border-radius: 8px; text-align: center;">
+            <div style="background: white; border: 2px solid #8b5cf6; padding: 16px; border-radius: 0; text-align: center;">
                 <div style="font-size: 28px; font-weight: 700; color: #8b5cf6;">${totales.enEditorial}</div>
                 <div style="font-size: 10px; color: #64748b; text-transform: uppercase;">En Editorial</div>
             </div>
-            <div style="background: white; border: 2px solid #0284c7; padding: 16px; border-radius: 8px; text-align: center;">
+            <div style="background: white; border: 2px solid #0284c7; padding: 16px; border-radius: 0; text-align: center;">
                 <div style="font-size: 28px; font-weight: 700; color: #0284c7;">${totales.enProceso}</div>
                 <div style="font-size: 10px; color: #64748b; text-transform: uppercase;">En Proceso</div>
             </div>
-            <div style="background: white; border: 2px solid ${totales.atrasos > 0 ? '#dc2626' : '#e2e8f0'}; padding: 16px; border-radius: 8px; text-align: center;">
+            <div style="background: white; border: 2px solid ${totales.atrasos > 0 ? '#dc2626' : '#e2e8f0'}; padding: 16px; border-radius: 0; text-align: center;">
                 <div style="font-size: 28px; font-weight: 700; color: ${totales.atrasos > 0 ? '#dc2626' : '#64748b'};">${totales.atrasos}</div>
                 <div style="font-size: 10px; color: #64748b; text-transform: uppercase;">Atrasos</div>
             </div>
@@ -2258,21 +2498,21 @@ function generarGraficoSubcontratos(subcontratosData) {
 
     // Leyenda
     const leyendaHTML = `
-        <div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 20px; padding: 12px; background: #f8fafc; border-radius: 8px;">
+        <div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 20px; padding: 12px; background: #f8fafc; border-radius: 0;">
             <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="width: 14px; height: 14px; background: #059669; border-radius: 3px;"></span>
+                <span style="width: 14px; height: 14px; background: #059669; border-radius: 0;"></span>
                 <span style="font-size: 11px;">Incorporadas</span>
             </div>
             <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="width: 14px; height: 14px; background: #8b5cf6; border-radius: 3px;"></span>
+                <span style="width: 14px; height: 14px; background: #8b5cf6; border-radius: 0;"></span>
                 <span style="font-size: 11px;">En Editorial</span>
             </div>
             <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="width: 14px; height: 14px; background: #0284c7; border-radius: 3px;"></span>
+                <span style="width: 14px; height: 14px; background: #0284c7; border-radius: 0;"></span>
                 <span style="font-size: 11px;">En Proceso</span>
             </div>
             <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="width: 14px; height: 14px; background: #d97706; border-radius: 3px;"></span>
+                <span style="width: 14px; height: 14px; background: #d97706; border-radius: 0;"></span>
                 <span style="font-size: 11px;">En Elaboración</span>
             </div>
         </div>
@@ -2284,7 +2524,7 @@ function generarGraficoSubcontratos(subcontratosData) {
         <div class="subcontrato-visual">
             ${cards}
         </div>
-        <div style="background: linear-gradient(135deg, #1a365d, #2c5282); color: white; padding: 16px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="background: linear-gradient(135deg, #1a365d, #2c5282); color: white; padding: 16px 20px; border-radius: 0; display: flex; justify-content: space-between; align-items: center;">
             <div>
                 <div style="font-size: 12px; opacity: 0.9;">Avance Total del Proyecto</div>
                 <div style="font-size: 10px; opacity: 0.7;">${totales.incorporadas + totales.enEditorial} listos para cierre de ${totales.total}</div>

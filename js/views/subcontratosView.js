@@ -659,7 +659,7 @@ function renderizarGraficoSubcontrato(sub) {
                 tooltip: {
                     backgroundColor: 'rgba(30, 41, 59, 0.95)',
                     padding: 10,
-                    cornerRadius: 6
+                    cornerRadius: 0
                 }
             }
         }
